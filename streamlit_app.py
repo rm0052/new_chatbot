@@ -295,7 +295,7 @@ def extract_company_info(cik):
         
         # Extract key sections from the 10-K
         business_section = extract_section(filing_content, "Item 1", "Item 1A")
-        risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
+        # risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
         
         # Get company facts
         url = f"https://data.sec.gov/submissions/CIK{cik}.json"
