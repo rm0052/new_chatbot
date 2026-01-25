@@ -1125,36 +1125,6 @@ st.caption("""
 This application uses data from the SEC EDGAR database, which contains official company filings.
 Data is retrieved in real-time from SEC.gov and is subject to their terms of service.
 """)
-        risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
-        
-        # Get company facts
-        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
-        headers = {
-            "User-Agent": "CompanyDeepDive research@example.com"
-        }
-        
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        # Extract company information
-        company_info = {
-            "name": data.get("name", ""),
-            "sic": data.get("sicCode", ""),
-            "sicDescription": data.get("sicDescription", ""),
-            "website": data.get("website", ""),
-            "description": business_section[:5000] if len(business_section) > 5000 else business_section,
-            "riskFactors": risk_factors[:5000] if len(risk_factors) > 5000 else risk_factors,
-            "filingDate": filings[0]['filingDate'],
-            "fiscalYearEnd": data.get("fiscalYearEnd", "")
-        }
-        
-        return company_info
-    
-    except Exception as e:
-        logger.error(f"Error extracting company info: {str(e)}")
-        return {"error": f"Failed to extract company info: {str(e)}"}
 
 def extract_section(text, start_marker, end_marker):
     """Extract a section from the filing text"""
