@@ -1135,7 +1135,7 @@ with st.sidebar:
                         "financials": company_info.get("financials", {})
                     }
                     documents = []
-                    for line in company_info.split("\n"): 
+                    for line in company_info.get("info").split("\n"): 
                         if line.strip(): 
                             documents.append( Document( page_content=line.strip(), metadata={ "source": "SEC_Edgar", "type": "Files" } ) )
                     rag.vector_store.add_documents(documents)
