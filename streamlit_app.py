@@ -1802,40 +1802,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Analysis Options")
     
-    if st.session_state.company_data and "name" in st.session_state.company_data:
-        if st.button("Company Overview"):
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": f"Give me an overview of {st.session_state.company_data['name']}"
-            })
-            
-            if "info" in st.session_state.company_data and isinstance(st.session_state.company_data["info"], dict):
-                company_info = st.session_state.company_data["info"]
-                
-                overview = f"# {company_info.get('name', st.session_state.company_data['name'])}\n\n"
-                
-                if "sicDescription" in company_info:
-                    overview += f"**Industry:** {company_info['sicDescription']}\n\n"
-                
-                if "description" in company_info:
-                    overview += f"**Business Description:**\n{company_info['description'][:1000]}...\n\n"
-                
-                if "filingDate" in company_info:
-                    overview += f"**Latest 10-K Filing Date:** {company_info['filingDate']}\n\n"
-                
-                if "website" in company_info and company_info["website"]:
-                    overview += f"**Website:** {company_info['website']}\n\n"
-                
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": overview
-                })
-            else:
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": "Company overview information is not available."
-                })
-            
+    if st.session_state.company_data and "name" in st.session_state.company_data:            
         if st.button("Financial Data"):
             st.session_state.messages.append({
                 "role": "user", 
