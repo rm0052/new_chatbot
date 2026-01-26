@@ -1852,25 +1852,6 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat input
-if prompt := st.chat_input("Ask me about a company..."):
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    # Display user message in chat message container
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # Generate a response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            company_context = st.session_state.company_data.get("name", None)
-            response = process_user_query(prompt, company_context)
-            st.markdown(response)
-    
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
 # Instructions at the bottom
 st.markdown("---")
 st.markdown("""
