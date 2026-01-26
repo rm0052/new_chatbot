@@ -1692,7 +1692,6 @@ with st.sidebar:
     st.title("Company Deep Dive")
     st.markdown("---")
     
-    company_name = st.text_input("Enter a company name or ticker:", key="company_input")
     
     if st.button("Analyze Company") and company_name:
         sanitized_company = sanitize_input(company_name)
