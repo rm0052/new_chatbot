@@ -60,7 +60,6 @@ def validate_company_name(company_name):
         return False
     return True
 
-# SEC EDGAR API Functions
 def search_company(company_name):
     """Search for a company in SEC EDGAR database by name"""
     sanitized_company = sanitize_input(company_name)
@@ -127,10 +126,72 @@ def search_company(company_name):
                         logger.info(f"CIK found in tag {tag.name}: {company_info['cik']}")
                         break
         
-        # If CIK still not found, log the entire response for debugging
+        # Method 4: Look for CIK in href attributes
         if not cik_found:
-            logger.warning(f"CIK not found in response for: {sanitized_company}")
+            for tag in soup.find_all(href=True):
+                href = tag.get('href', '')
+                cik_match = re.search(r'CIK=(\d+)', href)
+                if cik_match:
+                    company_info['cik'] = cik_match.group(1).zfill(10)
+                    cik_found = True
+                    logger.info(f"CIK found in href attribute: {company_info['cik']}")
+                    break
+        
+        # Method 5: Look for CIK in any attribute of any tag
+        if not cik_found:
+            for tag in soup.find_all():
+                for attr_name, attr_value in tag.attrs.items():
+                    if isinstance(attr_value, str):
+                        cik_match = re.search(r'CIK[=:]?\s*(\d+)', attr_value)
+                        if cik_match:
+                            company_info['cik'] = cik_match.group(1).zfill(10)
+                            cik_found = True
+                            logger.info(f"CIK found in {attr_name} attribute: {company_info['cik']}")
+                            break
+                if cik_found:
+                    break
+        
+        # Method 6: Try to extract from the full response text
+        if not cik_found:
+            # Look for CIK pattern in the entire response
+            cik_matches = re.findall(r'CIK[=:]?\s*(\d+)', response.text)
+            if cik_matches:
+                company_info['cik'] = cik_matches[0].zfill(10)
+                cik_found = True
+                logger.info(f"CIK found in full response text: {company_info['cik']}")
+            else:
+                # Try a more general pattern to find any number that might be a CIK
+                # Look for numbers in specific contexts that might indicate a CIK
+                cik_matches = re.findall(r'(?:cik|CIK|Central Index Key|company-info)[^0-9]*(\d{5,10})', response.text)
+                if cik_matches:
+                    company_info['cik'] = cik_matches[0].zfill(10)
+                    cik_found = True
+                    logger.info(f"CIK found with general pattern: {company_info['cik']}")
+        
+        # If CIK still not found, try direct API call to the company search JSON endpoint
+        if not cik_found:
+            logger.warning(f"CIK not found in XML response for: {sanitized_company}")
             logger.debug(f"Response content: {response.text[:1000]}...")  # Log first 1000 chars
+            
+            # Try the alternative JSON API endpoint
+            try:
+                alt_url = f"https://www.sec.gov/cgi-bin/browse-edgar?company={quote_plus(sanitized_company)}&owner=exclude&action=getcompany&output=json"
+                alt_response = requests.get(alt_url, headers=headers)
+                alt_response.raise_for_status()
+                
+                # Parse JSON response
+                json_data = alt_response.json()
+                if 'cik' in json_data:
+                    company_info['cik'] = str(json_data['cik']).zfill(10)
+                    cik_found = True
+                    logger.info(f"CIK found in JSON response: {company_info['cik']}")
+                elif 'ciks' in json_data and json_data['ciks']:
+                    # Get the first CIK if multiple are returned
+                    company_info['cik'] = str(list(json_data['ciks'].keys())[0]).zfill(10)
+                    cik_found = True
+                    logger.info(f"CIK found in JSON ciks field: {company_info['cik']}")
+            except Exception as e:
+                logger.warning(f"Failed to get CIK from alternative JSON endpoint: {str(e)}")
         
         # Get company name
         name_tag = soup.find('company-info', {'reg-s-k-form'})
@@ -173,7 +234,7 @@ def search_company(company_name):
     except Exception as e:
         logger.error(f"Error searching company: {str(e)}")
         return {"error": f"Failed to search company: {str(e)}"}
-
+        
 def get_company_filings(cik, filing_type=None, limit=10):
     """Get recent filings for a company by CIK"""
     try:
