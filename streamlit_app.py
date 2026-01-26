@@ -1136,7 +1136,7 @@ with st.sidebar:
                         "financials": company_info.get("financials", {})
                     }
                     documents = []
-                    base_metadata = { "company": docs["name"], "sic": docs["sic"], "source": "SEC_EDGAR", "type": "company_profile" }
+                    base_metadata = { "company": docs.get("name"), "sic": docs.get("sic"), "source": "SEC_EDGAR", "type": "company_profile" }
                     field_map = { "description": "Business Description", "riskFactors": "Risk Factors", "website": "Website", "sicDescription": "SIC Description", "fiscalYearEnd": "Fiscal Year End" }
                     for field, title in field_map.items(): 
                         content = docs.get(field, "") 
