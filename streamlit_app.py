@@ -1141,8 +1141,12 @@ with st.sidebar:
                     for field, title in field_map.items(): 
                         content = docs.get(field, "") 
                         if content and content.strip(): 
-                            documents.append( Document( page_content=f"{title}:\n{content.strip()}", metadata={**base_metadata, "section": field} ) )
-                    rag.vector_store.add_documents(documents)
+                            documents.append( Document( page_content=f"{title}:\n{content}", metadata={**base_metadata, "section": field} ) )
+                    if documents:
+                        # Add documents in batches if there are many batch_size = 100 
+                        for i in range(0, len(documents), batch_size): 
+                            batch = documents[i:i + batch_size] 
+                            rag.vector_store.add_documents(batch)
                     # Add system message to chat
                     st.session_state.messages.append({
                         "role": "assistant", 
