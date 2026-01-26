@@ -676,7 +676,7 @@ def get_company_swot(company_name):
         
         for indicator in positive_indicators:
             # Search in business section
-            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', business_section, re.IGNORECASE)
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\\.)', business_section, re.IGNORECASE)
             for match in matches:
                 strength = match.group(1).strip()
                 if strength and len(strength) > 20 and strength not in strengths_found:
@@ -689,7 +689,7 @@ def get_company_swot(company_name):
                 break
             
             # Search in MD&A
-            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', md_and_a, re.IGNORECASE)
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\\.)', md_and_a, re.IGNORECASE)
             for match in matches:
                 strength = match.group(1).strip()
                 if strength and len(strength) > 20 and strength not in strengths_found:
@@ -790,7 +790,7 @@ def get_company_swot(company_name):
         
         for indicator in opportunity_indicators:
             # Search in business section
-            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', business_section, re.IGNORECASE)
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\\.)', business_section, re.IGNORECASE)
             for match in matches:
                 opportunity = match.group(1).strip()
                 if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
@@ -803,7 +803,7 @@ def get_company_swot(company_name):
                 break
             
             # Search in MD&A
-            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', md_and_a, re.IGNORECASE)
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\\.)', md_and_a, re.IGNORECASE)
             for match in matches:
                 opportunity = match.group(1).strip()
                 if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
