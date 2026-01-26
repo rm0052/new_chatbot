@@ -11,7 +11,7 @@ import time
 import logging
 from urllib.parse import quote_plus
 import datetime
-from reddit_rag import get_reddit_rag
+from chatbot_rag import get_reddit_rag
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
