@@ -1121,6 +1121,7 @@ with st.sidebar:
                     cik = company_search["cik"]
                     
                     # Fetch company information
+                    docs=extract_company_info(cik)
                     company_info = fetch_company_info(sanitized_company)
                     sentiment_result = analyze_company_sentiment(sanitized_company)
                     swot_result = get_company_swot(sanitized_company)
@@ -1135,9 +1136,12 @@ with st.sidebar:
                         "financials": company_info.get("financials", {})
                     }
                     documents = []
-                    for line in company_info.get("info").split("\n"): 
-                        if line.strip(): 
-                            documents.append( Document( page_content=line.strip(), metadata={ "source": "SEC_Edgar", "type": "Files" } ) )
+                    base_metadata = { "company": company_info["name"], "sic": company_info["sic"], "source": "SEC_EDGAR", "type": "company_profile" }
+                    field_map = { "description": "Business Description", "riskFactors": "Risk Factors", "website": "Website", "sicDescription": "SIC Description", "fiscalYearEnd": "Fiscal Year End" }
+                    for field, title in field_map.items(): 
+                        content = docs.get(field, "") 
+                        if content and content.strip(): 
+                            documents.append( Document( page_content=f"{title}:\n{content}", metadata={**base_metadata, "section": field} ) )
                     rag.vector_store.add_documents(documents)
                     # Add system message to chat
                     st.session_state.messages.append({
