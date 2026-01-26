@@ -7,3 +7,10 @@ plotly>=5.14.1
 requests>=2.28.2
 beautifulsoup4>=4.12.2
 lxml>=4.9.2
+langchain-core
+langchain-groq==0.0.1
+faiss-cpu
+praw
+langchain==0.1.0
+sentence-transformers
+langchain-community==0.0.20
