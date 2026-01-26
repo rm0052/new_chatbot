@@ -74,34 +74,74 @@ def search_company(company_name):
             "User-Agent": "CompanyDeepDive research@example.com"  # SEC requires a user-agent
         }
         
+        logger.info(f"Searching for company: {sanitized_company}")
+        logger.info(f"Request URL: {url}")
+        
         response = requests.get(url, headers=headers)
         response.raise_for_status()
+        
+        # Log response status and content length
+        logger.info(f"Response status: {response.status_code}, Content length: {len(response.content)}")
         
         # Parse XML response
         soup = BeautifulSoup(response.content, 'lxml-xml')
         
         # Check if company was found
         if "No matching companies" in response.text:
+            logger.warning(f"No matching companies found for: {sanitized_company}")
             return {"error": "No matching companies found"}
         
         # Extract company information
         company_info = {}
         
-        # Get CIK (Central Index Key)
+        # Get CIK (Central Index Key) - Try multiple methods
+        cik_found = False
+        
+        # Method 1: Look for CIK in id tag
         cik_tag = soup.find('id')
         if cik_tag:
             cik_match = re.search(r'CIK=(\d+)', cik_tag.text)
             if cik_match:
                 company_info['cik'] = cik_match.group(1).zfill(10)  # SEC now uses 10-digit CIKs
+                cik_found = True
+                logger.info(f"CIK found in id tag: {company_info['cik']}")
+        
+        # Method 2: Look for CIK in directory tag
+        if not cik_found:
+            directory_tag = soup.find('directory')
+            if directory_tag:
+                cik_match = re.search(r'(\d+)', directory_tag.text)
+                if cik_match:
+                    company_info['cik'] = cik_match.group(1).zfill(10)
+                    cik_found = True
+                    logger.info(f"CIK found in directory tag: {company_info['cik']}")
+        
+        # Method 3: Look for CIK in any tag with CIK pattern
+        if not cik_found:
+            for tag in soup.find_all():
+                if tag.string:
+                    cik_match = re.search(r'CIK[=:]?\s*(\d+)', tag.string)
+                    if cik_match:
+                        company_info['cik'] = cik_match.group(1).zfill(10)
+                        cik_found = True
+                        logger.info(f"CIK found in tag {tag.name}: {company_info['cik']}")
+                        break
+        
+        # If CIK still not found, log the entire response for debugging
+        if not cik_found:
+            logger.warning(f"CIK not found in response for: {sanitized_company}")
+            logger.debug(f"Response content: {response.text[:1000]}...")  # Log first 1000 chars
         
         # Get company name
         name_tag = soup.find('company-info', {'reg-s-k-form'})
         if name_tag:
             company_info['name'] = name_tag.text.strip()
+            logger.info(f"Company name found: {company_info['name']}")
         else:
             title_tag = soup.find('title')
             if title_tag:
                 company_info['name'] = title_tag.text.strip()
+                logger.info(f"Company name found in title: {company_info['name']}")
         
         # Get SIC (Standard Industrial Classification)
         sic_tag = soup.find('assigned-sic')
@@ -122,6 +162,11 @@ def search_company(company_name):
         state_tag = soup.find('state-of-incorporation')
         if state_tag:
             company_info['state'] = state_tag.text.strip()
+        
+        # Final check for CIK
+        if 'cik' not in company_info:
+            logger.error(f"Failed to extract CIK for company: {sanitized_company}")
+            return {"error": "Could not extract CIK from SEC response. Please try a different company name or ticker."}
             
         return company_info
     
