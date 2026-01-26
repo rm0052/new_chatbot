@@ -1141,7 +1141,7 @@ with st.sidebar:
                     for field, title in field_map.items(): 
                         content = docs.get(field, "") 
                         if content and content.strip(): 
-                            documents.append( Document( page_content=f"{title}:\n{content}", metadata={**base_metadata, "section": field} ) )
+                            documents.append( Document( page_content=f"{title}:\n{content.strip()}", metadata={**base_metadata, "section": field} ) )
                     rag.vector_store.add_documents(documents)
                     # Add system message to chat
                     st.session_state.messages.append({
