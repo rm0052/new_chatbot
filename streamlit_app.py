@@ -1693,44 +1693,6 @@ with st.sidebar:
     st.markdown("---")
     
     
-    if st.button("Analyze Company") and company_name:
-        sanitized_company = sanitize_input(company_name)
-        if validate_company_name(sanitized_company):
-            with st.spinner(f"Analyzing {sanitized_company} using SEC EDGAR data..."):
-                # Search for the company
-                company_search = search_company(sanitized_company)
-                
-                if "error" in company_search:
-                    st.error(f"Error: {company_search['error']}")
-                elif "cik" not in company_search:
-                    st.error("Company CIK not found")
-                else:
-                    # Get company CIK
-                    cik = company_search["cik"]
-                    
-                    # Fetch company information
-                    company_info = fetch_company_info(sanitized_company)
-                    sentiment_result = analyze_company_sentiment(sanitized_company)
-                    swot_result = get_company_swot(sanitized_company)
-                    
-                    # Store results in session state
-                    st.session_state.company_data = {
-                        "name": sanitized_company,
-                        "cik": cik,
-                        "info": company_info.get("info", "Information not available"),
-                        "sentiment": sentiment_result.get("sentiment", "Sentiment analysis not available"),
-                        "swot": swot_result.get("swot", "SWOT analysis not available"),
-                        "financials": company_info.get("financials", {})
-                    }
-                    
-                    # Add system message to chat
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": f"I've analyzed {sanitized_company} using SEC EDGAR data. You can ask me specific questions about this company now."
-                    })
-        else:
-            st.error("Please enter a valid company name or ticker")
-    
     st.markdown("---")
     st.markdown("### Analysis Options")
     
