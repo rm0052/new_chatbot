@@ -11,7 +11,7 @@ import time
 import logging
 from urllib.parse import quote_plus
 import datetime
-
+from reddit_rag import get_reddit_rag
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,7 +22,7 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("company_deepdive")
-
+rag = get_reddit_rag()
 # Load environment variables
 load_dotenv()
 
@@ -1134,7 +1134,11 @@ with st.sidebar:
                         "swot": swot_result.get("swot", "SWOT analysis not available"),
                         "financials": company_info.get("financials", {})
                     }
-                    
+                    documents = []
+                    for line in company_info.split("\n"): 
+                        if line.strip(): 
+                            documents.append( Document( page_content=line.strip(), metadata={ "source": "SEC_Edgar", "type": "Files" } ) )
+                    rag.vector_store.add_documents(documents)
                     # Add system message to chat
                     st.session_state.messages.append({
                         "role": "assistant", 
