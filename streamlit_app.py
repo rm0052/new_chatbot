@@ -1339,3 +1339,46 @@ with st.sidebar:
     Enter a company name or ticker in the sidebar and click 'Analyze Company' to get started.
     """)
 
+# Main chat interface
+st.title("Company Deep Dive Chatbot 🏢")
+st.caption("Powered by SEC EDGAR data")
+
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Chat input
+if prompt := st.chat_input("Ask me about a company..."):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Generate a response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            company_context = st.session_state.company_data.get("name", None)
+            response = process_user_query(prompt, company_context)
+            st.markdown(response)
+    
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+# Instructions at the bottom
+st.markdown("---")
+st.markdown("""
+### How to use this chatbot:
+1. Enter a company name or ticker in the sidebar and click "Analyze Company"
+2. Use the analysis buttons in the sidebar to get specific information
+3. Or simply ask questions in the chat input below
+""")
+
+# Footer with data source notice
+st.markdown("---")
+st.caption("""
+This application uses data from the SEC EDGAR database, which contains official company filings.
+Data is retrieved in real-time from SEC.gov and is subject to their terms of service.
+""")
