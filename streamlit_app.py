@@ -1377,7 +1377,7 @@ with st.sidebar:
                     "content": "Company CIK not available to retrieve SEC filings."
                 })
         
-        if st.button("Earnings Call Transcript"):
+        if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
             
@@ -1394,27 +1394,44 @@ with st.sidebar:
                 quarter_options = [1, 2, 3, 4]
                 selected_quarter = st.selectbox("Quarter:", quarter_options, index=default_quarter-1, key="transcript_quarter")
             
+            # Separate button outside of any nested conditions
             if st.button("Fetch Transcript", key="fetch_transcript"):
                 st.session_state.messages.append({
                     "role": "user", 
                     "content": f"Show me the earnings call transcript for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
                 })
                 
-                with st.spinner(f"Fetching earnings transcript for {st.session_state.company_data['name']}..."):
+                # Create a placeholder to show status directly in the expander
+                status_placeholder = st.empty()
+                status_placeholder.info(f"Fetching earnings transcript for {st.session_state.company_data['name']}...")
+                
+                try:
+                    # Get the transcript data
                     transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter)
                     
+                    # Clear the status message
+                    status_placeholder.empty()
+                    
                     if "error" in transcript_result:
+                        error_msg = f"Error retrieving earnings transcript: {transcript_result['error']}"
+                        status_placeholder.error(error_msg)
+                        
+                        # Add to chat history
                         st.session_state.messages.append({
                             "role": "assistant", 
-                            "content": f"Error retrieving earnings transcript: {transcript_result['error']}"
+                            "content": error_msg
                         })
                     else:
                         transcripts = transcript_result.get("transcripts", [])
                         
                         if not transcripts:
+                            no_data_msg = f"No earnings call transcript found for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
+                            status_placeholder.warning(no_data_msg)
+                            
+                            # Add to chat history
                             st.session_state.messages.append({
                                 "role": "assistant", 
-                                "content": f"No earnings call transcript found for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
+                                "content": no_data_msg
                             })
                         else:
                             # Display the transcript
@@ -1431,10 +1448,27 @@ with st.sidebar:
                                 transcript_overview += f"**Year:** {transcript_year}\n\n"
                                 transcript_overview += f"**Transcript:**\n\n{transcript_content}\n\n"
                             
+                            # Show success message in the expander
+                            status_placeholder.success("Transcript retrieved successfully!")
+                            
+                            # Add to chat history
                             st.session_state.messages.append({
                                 "role": "assistant", 
                                 "content": transcript_overview
                             })
+                            
+                            # Force a rerun to update the chat display
+                            st.experimental_rerun()
+                except Exception as e:
+                    error_msg = f"An error occurred while fetching the transcript: {str(e)}"
+                    status_placeholder.error(error_msg)
+                    logger.error(error_msg)
+                    
+                    # Add to chat history
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": error_msg
+                    })
     
     st.markdown("---")
     st.markdown("### About")
