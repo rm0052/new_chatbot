@@ -11,7 +11,8 @@ import time
 import logging
 from urllib.parse import quote_plus
 import datetime
-from chatbot_rag import get_reddit_rag
+import html
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,9 +23,12 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("company_deepdive")
-rag = get_reddit_rag()
+
 # Load environment variables
 load_dotenv()
+
+# Get API keys from environment variables
+FMP_API_KEY = "EHnkKCCNr84wLOjcblnVaVut0EmXJqCa"
 
 # Set page configuration
 st.set_page_config(
@@ -60,6 +64,7 @@ def validate_company_name(company_name):
         return False
     return True
 
+# SEC EDGAR API Functions
 def search_company(company_name):
     """Search for a company in SEC EDGAR database by name"""
     sanitized_company = sanitize_input(company_name)
@@ -234,7 +239,7 @@ def search_company(company_name):
     except Exception as e:
         logger.error(f"Error searching company: {str(e)}")
         return {"error": f"Failed to search company: {str(e)}"}
-        
+
 def get_company_filings(cik, filing_type=None, limit=10):
     """Get recent filings for a company by CIK"""
     try:
@@ -401,7 +406,7 @@ def extract_company_info(cik):
         
         # Extract key sections from the 10-K
         business_section = extract_section(filing_content, "Item 1", "Item 1A")
-        # risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
+        risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
         
         # Get company facts
         url = f"https://data.sec.gov/submissions/CIK{cik}.json"
@@ -621,97 +626,134 @@ def analyze_company_sentiment(company_name):
         logger.error(f"Error analyzing sentiment: {str(e)}")
         return {"error": f"Failed to analyze company sentiment: {str(e)}"}
 
+def get_earnings_transcript(company_name, year=None, quarter=None):
+    """Fetch earnings call transcript from Financial Modeling Prep API"""
+    sanitized_company = sanitize_input(company_name)
+    if not validate_company_name(sanitized_company):
+        return {"error": "Invalid company name provided"}
+    
+    if not FMP_API_KEY:
+        return {"error": "FMP API key is not configured. Please set the FMP_API_KEY environment variable."}
+    
+    try:
+        # Validate and sanitize year and quarter inputs
+        current_year = datetime.datetime.now().year
+        
+        # If year is not provided, use the current year
+        if year is None:
+            year = current_year
+        else:
+            # Ensure year is an integer and within a reasonable range
+            try:
+                year = int(year)
+                if year < 2000 or year > current_year:
+                    return {"error": f"Year must be between 2000 and {current_year}"}
+            except ValueError:
+                return {"error": "Year must be a valid number"}
+        
+        # If quarter is not provided, use the most recent quarter
+        if quarter is None:
+            current_month = datetime.datetime.now().month
+            quarter = ((current_month - 1) // 3) + 1
+        else:
+            # Ensure quarter is an integer between 1 and 4
+            try:
+                quarter = int(quarter)
+                if quarter < 1 or quarter > 4:
+                    return {"error": "Quarter must be between 1 and 4"}
+            except ValueError:
+                return {"error": "Quarter must be a valid number"}
+        
+        # Construct the API URL with proper parameter encoding
+        symbol = quote_plus(sanitized_company.upper())
+        url = f"https://financialmodelingprep.com/stable/earning-call-transcript?symbol={symbol}&year={year}&quarter={quarter}&apikey={FMP_API_KEY}"
+        
+        logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
+        
+        # Make the API request with proper headers
+        headers = {
+            "User-Agent": "CompanyDeepDive research@example.com"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Parse the JSON response
+        data = response.json()
+        
+        # Check if the response is empty or has an error
+        if not data or isinstance(data, dict) and "error" in data:
+            return {"error": "No earnings call transcript found for the specified parameters"}
+        
+        # Process and sanitize the transcript data
+        transcript_data = []
+        
+        for item in data:
+            # Sanitize content to prevent XSS
+            content = html.escape(item.get("content", ""))
+            
+            transcript_data.append({
+                "date": item.get("date", ""),
+                "quarter": item.get("quarter", ""),
+                "year": item.get("year", ""),
+                "content": content
+            })
+        
+        return {"transcripts": transcript_data}
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching earnings transcript: {str(e)}")
+        return {"error": f"Failed to fetch earnings transcript: {str(e)}"}
+    
+    except ValueError as e:
+        logger.error(f"Error parsing earnings transcript response: {str(e)}")
+        return {"error": f"Failed to parse earnings transcript response: {str(e)}"}
+    
+    except Exception as e:
+        logger.error(f"Unexpected error fetching earnings transcript: {str(e)}")
+        return {"error": f"An unexpected error occurred: {str(e)}"}
+
 def get_company_swot(company_name):
     """Generate a SWOT analysis for the company based on SEC filings"""
     sanitized_company = sanitize_input(company_name)
     if not validate_company_name(sanitized_company):
-        logger.warning(f"Invalid company name provided: {company_name}")
         return {"error": "Invalid company name provided"}
     
     try:
-        logger.info(f"Generating SWOT analysis for: {sanitized_company}")
-        
         # Search for the company
         company_search = search_company(sanitized_company)
         
         if "error" in company_search:
-            logger.warning(f"Error searching for company: {company_search['error']}")
             return company_search
         
         if "cik" not in company_search:
-            logger.warning(f"Company CIK not found for: {sanitized_company}")
             return {"error": "Company CIK not found"}
         
         # Get company CIK
         cik = company_search["cik"]
-        logger.info(f"Found CIK: {cik} for company: {sanitized_company}")
         
         # Get the most recent 10-K filing
         filings = get_company_filings(cik, filing_type="10-K", limit=1)
         
         if isinstance(filings, dict) and "error" in filings:
-            logger.warning(f"Error getting company filings: {filings['error']}")
             return {"error": filings["error"]}
         
         if not filings:
-            logger.warning(f"No 10-K filings found for company with CIK: {cik}")
-            # Try to get any filing type as a fallback
-            filings = get_company_filings(cik, limit=1)
-            if not filings or (isinstance(filings, dict) and "error" in filings):
-                logger.warning(f"No filings found for company with CIK: {cik}")
-                # Generate a basic SWOT with company information only
-                return {"swot": f"# SWOT Analysis for {sanitized_company}\n\nInsufficient SEC filing data available to generate a detailed SWOT analysis. Please try another company or check back later."}
+            return {"error": "No 10-K filings found"}
         
-        logger.info(f"Found filing: {filings[0]['form']} from {filings[0]['filingDate']} for CIK: {cik}")
-        
-        # Get the content of the filing
+        # Get the content of the 10-K filing
         filing_content = get_filing_content(cik, filings[0]['accessionNumber'], filings[0]['primaryDocument'])
         
-        if not filing_content or filing_content.startswith("Failed to get filing content"):
-            logger.warning(f"Failed to get filing content for CIK: {cik}, Accession: {filings[0]['accessionNumber']}")
-            return {"swot": f"# SWOT Analysis for {sanitized_company}\n\nUnable to retrieve filing content from SEC EDGAR. This may be due to temporary SEC API limitations or the filing format. Please try again later or try another company."}
-        
-        logger.info(f"Successfully retrieved filing content for CIK: {cik}, length: {len(filing_content)} characters")
-        
-        # Extract key sections from the filing
+        # Extract key sections from the 10-K
         business_section = extract_section(filing_content, "Item 1", "Item 1A")
-        if not business_section:
-            # Try alternative markers
-            business_section = extract_section(filing_content, "ITEM 1", "ITEM 1A")
-            if not business_section:
-                business_section = extract_section(filing_content, "Business", "Risk Factors")
-                if not business_section:
-                    logger.warning(f"Could not extract business section for CIK: {cik}")
-                    business_section = ""
-        
         risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
-        if not risk_factors:
-            # Try alternative markers
-            risk_factors = extract_section(filing_content, "ITEM 1A", "ITEM 1B")
-            if not risk_factors:
-                risk_factors = extract_section(filing_content, "Risk Factors", "Unresolved Staff Comments")
-                if not risk_factors:
-                    logger.warning(f"Could not extract risk factors for CIK: {cik}")
-                    risk_factors = ""
-        
         md_and_a = extract_section(filing_content, "Item 7", "Item 7A")
-        if not md_and_a:
-            # Try alternative markers
-            md_and_a = extract_section(filing_content, "ITEM 7", "ITEM 7A")
-            if not md_and_a:
-                md_and_a = extract_section(filing_content, "Management's Discussion", "Quantitative and Qualitative Disclosures")
-                if not md_and_a:
-                    logger.warning(f"Could not extract MD&A for CIK: {cik}")
-                    md_and_a = ""
-        
-        logger.info(f"Extracted sections - Business: {len(business_section)} chars, Risk Factors: {len(risk_factors)} chars, MD&A: {len(md_and_a)} chars")
         
         # Extract financial data
         financial_data = extract_financial_data(cik)
         
         # Generate SWOT analysis
-        swot = f"# SWOT Analysis for {sanitized_company} based on SEC Filings\n\n"
-        swot += f"*Based on {filings[0]['form']} filed on {filings[0]['filingDate']}*\n\n"
+        swot = "# SWOT Analysis based on SEC Filings\n\n"
         
         # Strengths
         swot += "## Strengths\n\n"
@@ -719,80 +761,67 @@ def get_company_swot(company_name):
         # Look for positive statements in business section and MD&A
         positive_indicators = [
             "market leader", "competitive advantage", "strong", "growth", "increase", 
-            "profitable", "innovation", "patent", "proprietary", "exclusive", "success",
-            "leading", "largest", "first", "best", "unique", "superior", "efficient"
+            "profitable", "innovation", "patent", "proprietary", "exclusive", "success"
         ]
         
         strengths_found = []
         
-        # First try to find complete sentences containing the indicators
         for indicator in positive_indicators:
             # Search in business section
-            if business_section:
-                matches = re.finditer(r'([^.!?]*\b' + re.escape(indicator) + r'\b[^.!?]*[.!?])', business_section, re.IGNORECASE)
-                for match in matches:
-                    strength = match.group(1).strip()
-                    if strength and len(strength) > 20 and strength not in strengths_found:
-                        strengths_found.append(strength)
-                        if len(strengths_found) >= 5:
-                            break
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', business_section, re.IGNORECASE)
+            for match in matches:
+                strength = match.group(1).strip()
+                if strength and len(strength) > 20 and strength not in strengths_found:
+                    strengths_found.append(strength)
+                    if len(strengths_found) >= 5:
+                        break
             
             # If we have enough strengths, break
             if len(strengths_found) >= 5:
                 break
             
             # Search in MD&A
-            if md_and_a:
-                matches = re.finditer(r'([^.!?]*\b' + re.escape(indicator) + r'\b[^.!?]*[.!?])', md_and_a, re.IGNORECASE)
-                for match in matches:
-                    strength = match.group(1).strip()
-                    if strength and len(strength) > 20 and strength not in strengths_found:
-                        strengths_found.append(strength)
-                        if len(strengths_found) >= 5:
-                            break
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', md_and_a, re.IGNORECASE)
+            for match in matches:
+                strength = match.group(1).strip()
+                if strength and len(strength) > 20 and strength not in strengths_found:
+                    strengths_found.append(strength)
+                    if len(strengths_found) >= 5:
+                        break
             
             # If we have enough strengths, break
             if len(strengths_found) >= 5:
                 break
         
         # Add financial strengths if available
-        if isinstance(financial_data, dict) and "error" not in financial_data:
+        if not isinstance(financial_data, dict) or "error" not in financial_data:
             # Revenue growth
             if financial_data.get("revenue") and len(financial_data["revenue"]) >= 2:
                 latest = financial_data["revenue"][0]
                 previous = financial_data["revenue"][1]
                 
-                try:
-                    change = ((latest["value"] - previous["value"]) / previous["value"]) * 100
-                    
-                    if change > 0:
-                        strengths_found.append(f"Revenue increased by {change:.2f}% from {previous['date']} to {latest['date']}.")
-                except (TypeError, ZeroDivisionError) as e:
-                    logger.warning(f"Error calculating revenue change: {str(e)}")
+                change = ((latest["value"] - previous["value"]) / previous["value"]) * 100
+                
+                if change > 0:
+                    strengths_found.append(f"Revenue increased by {change:.2f}% from {previous['date']} to {latest['date']}.")
             
             # Net Income growth
             if financial_data.get("netIncome") and len(financial_data["netIncome"]) >= 2:
                 latest = financial_data["netIncome"][0]
                 previous = financial_data["netIncome"][1]
                 
-                try:
-                    if previous["value"] != 0:
-                        change = ((latest["value"] - previous["value"]) / abs(previous["value"])) * 100
-                        
-                        if change > 0:
-                            strengths_found.append(f"Net Income increased by {change:.2f}% from {previous['date']} to {latest['date']}.")
-                except (TypeError, ZeroDivisionError) as e:
-                    logger.warning(f"Error calculating net income change: {str(e)}")
+                if previous["value"] != 0:
+                    change = ((latest["value"] - previous["value"]) / abs(previous["value"])) * 100
+                    
+                    if change > 0:
+                        strengths_found.append(f"Net Income increased by {change:.2f}% from {previous['date']} to {latest['date']}.")
         
         # Add strengths to SWOT
         if strengths_found:
             for strength in strengths_found[:5]:
                 swot += f"- {strength}\n"
         else:
-            # Generate generic strengths based on industry if no specific strengths found
-            if "sicDescription" in company_search:
-                swot += f"- Industry presence in {company_search['sicDescription']}.\n"
-            swot += "- No additional specific strengths identified in recent SEC filings.\n"
+            swot += "- No clear strengths identified in recent SEC filings.\n"
         
         # Weaknesses
         swot += "\n## Weaknesses\n\n"
@@ -801,54 +830,44 @@ def get_company_swot(company_name):
         weaknesses_found = []
         
         # Look for specific risk statements
-        if risk_factors:
-            risk_statements = re.finditer(r'([^.!?]*(?:risk|challenge|weakness|difficulty|problem|issue|decline|decrease|reduction)[^.!?]*[.!?])', risk_factors, re.IGNORECASE)
-            
-            for match in risk_statements:
-                weakness = match.group(1).strip()
-                if weakness and len(weakness) > 20 and weakness not in weaknesses_found:
-                    weaknesses_found.append(weakness)
-                    if len(weaknesses_found) >= 5:
-                        break
+        risk_statements = re.finditer(r'([^.]*(?:risk|challenge|weakness|difficulty|problem|issue|decline|decrease|reduction)[^.]*\.)', risk_factors, re.IGNORECASE)
+        
+        for match in risk_statements:
+            weakness = match.group(1).strip()
+            if weakness and len(weakness) > 20 and weakness not in weaknesses_found:
+                weaknesses_found.append(weakness)
+                if len(weaknesses_found) >= 5:
+                    break
         
         # Add financial weaknesses if available
-        if isinstance(financial_data, dict) and "error" not in financial_data:
+        if not isinstance(financial_data, dict) or "error" not in financial_data:
             # Revenue decline
             if financial_data.get("revenue") and len(financial_data["revenue"]) >= 2:
                 latest = financial_data["revenue"][0]
                 previous = financial_data["revenue"][1]
                 
-                try:
-                    change = ((latest["value"] - previous["value"]) / previous["value"]) * 100
-                    
-                    if change < 0:
-                        weaknesses_found.append(f"Revenue decreased by {abs(change):.2f}% from {previous['date']} to {latest['date']}.")
-                except (TypeError, ZeroDivisionError) as e:
-                    logger.warning(f"Error calculating revenue change: {str(e)}")
+                change = ((latest["value"] - previous["value"]) / previous["value"]) * 100
+                
+                if change < 0:
+                    weaknesses_found.append(f"Revenue decreased by {abs(change):.2f}% from {previous['date']} to {latest['date']}.")
             
             # Net Income decline
             if financial_data.get("netIncome") and len(financial_data["netIncome"]) >= 2:
                 latest = financial_data["netIncome"][0]
                 previous = financial_data["netIncome"][1]
                 
-                try:
-                    if previous["value"] != 0:
-                        change = ((latest["value"] - previous["value"]) / abs(previous["value"])) * 100
-                        
-                        if change < 0:
-                            weaknesses_found.append(f"Net Income decreased by {abs(change):.2f}% from {previous['date']} to {latest['date']}.")
-                except (TypeError, ZeroDivisionError) as e:
-                    logger.warning(f"Error calculating net income change: {str(e)}")
+                if previous["value"] != 0:
+                    change = ((latest["value"] - previous["value"]) / abs(previous["value"])) * 100
+                    
+                    if change < 0:
+                        weaknesses_found.append(f"Net Income decreased by {abs(change):.2f}% from {previous['date']} to {latest['date']}.")
         
         # Add weaknesses to SWOT
         if weaknesses_found:
             for weakness in weaknesses_found[:5]:
                 swot += f"- {weakness}\n"
         else:
-            swot += "- No specific weaknesses identified in recent SEC filings.\n"
-            # Add a generic weakness based on industry if available
-            if "sicDescription" in company_search:
-                swot += f"- Potential exposure to general risks associated with the {company_search['sicDescription']} industry.\n"
+            swot += "- No clear weaknesses identified in recent SEC filings.\n"
         
         # Opportunities
         swot += "\n## Opportunities\n\n"
@@ -856,36 +875,33 @@ def get_company_swot(company_name):
         # Look for opportunity statements
         opportunity_indicators = [
             "opportunity", "potential", "growth", "expansion", "new market", 
-            "emerging", "development", "future", "prospect", "strategy",
-            "innovation", "technology", "digital", "transform", "invest"
+            "emerging", "development", "future", "prospect", "strategy"
         ]
         
         opportunities_found = []
         
         for indicator in opportunity_indicators:
             # Search in business section
-            if business_section:
-                matches = re.finditer(r'([^.!?]*\b' + re.escape(indicator) + r'\b[^.!?]*[.!?])', business_section, re.IGNORECASE)
-                for match in matches:
-                    opportunity = match.group(1).strip()
-                    if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
-                        opportunities_found.append(opportunity)
-                        if len(opportunities_found) >= 5:
-                            break
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', business_section, re.IGNORECASE)
+            for match in matches:
+                opportunity = match.group(1).strip()
+                if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
+                    opportunities_found.append(opportunity)
+                    if len(opportunities_found) >= 5:
+                        break
             
             # If we have enough opportunities, break
             if len(opportunities_found) >= 5:
                 break
             
             # Search in MD&A
-            if md_and_a:
-                matches = re.finditer(r'([^.!?]*\b' + re.escape(indicator) + r'\b[^.!?]*[.!?])', md_and_a, re.IGNORECASE)
-                for match in matches:
-                    opportunity = match.group(1).strip()
-                    if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
-                        opportunities_found.append(opportunity)
-                        if len(opportunities_found) >= 5:
-                            break
+            matches = re.finditer(r'([^.]*' + indicator + '[^.]*\.)', md_and_a, re.IGNORECASE)
+            for match in matches:
+                opportunity = match.group(1).strip()
+                if opportunity and len(opportunity) > 20 and opportunity not in opportunities_found:
+                    opportunities_found.append(opportunity)
+                    if len(opportunities_found) >= 5:
+                        break
             
             # If we have enough opportunities, break
             if len(opportunities_found) >= 5:
@@ -896,11 +912,7 @@ def get_company_swot(company_name):
             for opportunity in opportunities_found[:5]:
                 swot += f"- {opportunity}\n"
         else:
-            swot += "- No specific opportunities identified in recent SEC filings.\n"
-            # Add generic opportunities
-            swot += "- Potential for industry growth and market expansion.\n"
-            if "sicDescription" in company_search:
-                swot += f"- Possible innovation opportunities in the {company_search['sicDescription']} sector.\n"
+            swot += "- No clear opportunities identified in recent SEC filings.\n"
         
         # Threats
         swot += "\n## Threats\n\n"
@@ -909,53 +921,28 @@ def get_company_swot(company_name):
         threats_found = []
         
         # Look for specific threat statements
-        if risk_factors:
-            threat_statements = re.finditer(r'([^.!?]*(?:competition|competitor|threat|risk|regulatory|regulation|law|litigation|lawsuit|conflict|dispute)[^.!?]*[.!?])', risk_factors, re.IGNORECASE)
-            
-            for match in threat_statements:
-                threat = match.group(1).strip()
-                if threat and len(threat) > 20 and threat not in threats_found:
-                    threats_found.append(threat)
-                    if len(threats_found) >= 5:
-                        break
+        threat_statements = re.finditer(r'([^.]*(?:competition|competitor|threat|risk|regulatory|regulation|law|litigation|lawsuit|conflict|dispute)[^.]*\.)', risk_factors, re.IGNORECASE)
+        
+        for match in threat_statements:
+            threat = match.group(1).strip()
+            if threat and len(threat) > 20 and threat not in threats_found:
+                threats_found.append(threat)
+                if len(threats_found) >= 5:
+                    break
         
         # Add threats to SWOT
         if threats_found:
             for threat in threats_found[:5]:
                 swot += f"- {threat}\n"
         else:
-            swot += "- No specific threats identified in recent SEC filings.\n"
-            # Add generic threats
-            swot += "- General market competition and industry challenges.\n"
-            swot += "- Potential regulatory changes affecting business operations.\n"
+            swot += "- No clear threats identified in recent SEC filings.\n"
         
-        logger.info(f"Successfully generated SWOT analysis for {sanitized_company}")
         return {"swot": swot}
     
     except Exception as e:
         logger.error(f"Error generating SWOT: {str(e)}")
-        # Return a basic SWOT analysis instead of an error to ensure something is displayed
-        swot = f"# SWOT Analysis for {sanitized_company}\n\n"
-        swot += "*Note: This is a simplified analysis due to data retrieval limitations.*\n\n"
-        
-        swot += "## Strengths\n\n"
-        swot += "- Company has established presence in its industry.\n"
-        swot += "- Registered with SEC, indicating compliance with financial reporting requirements.\n\n"
-        
-        swot += "## Weaknesses\n\n"
-        swot += "- Detailed financial analysis not available at this time.\n"
-        swot += "- Limited public information for comprehensive assessment.\n\n"
-        
-        swot += "## Opportunities\n\n"
-        swot += "- Potential for growth in current and new markets.\n"
-        swot += "- Possibilities for strategic partnerships and acquisitions.\n\n"
-        
-        swot += "## Threats\n\n"
-        swot += "- Competitive pressures within the industry.\n"
-        swot += "- Regulatory changes that may impact operations.\n"
-        swot += "- Economic fluctuations affecting market conditions.\n"
-        
-        return {"swot": swot}
+        return {"error": f"Failed to generate SWOT analysis: {str(e)}"}
+
 def process_user_query(query, company_context=None):
     """Process general user queries about a company using SEC data"""
     sanitized_query = sanitize_input(query)
@@ -1121,7 +1108,6 @@ with st.sidebar:
                     cik = company_search["cik"]
                     
                     # Fetch company information
-                    docs=extract_company_info(cik)
                     company_info = fetch_company_info(sanitized_company)
                     sentiment_result = analyze_company_sentiment(sanitized_company)
                     swot_result = get_company_swot(sanitized_company)
@@ -1135,18 +1121,7 @@ with st.sidebar:
                         "swot": swot_result.get("swot", "SWOT analysis not available"),
                         "financials": company_info.get("financials", {})
                     }
-                    documents = []
-                    base_metadata = { "company": docs.get("name"), "sic": docs.get("sic"), "source": "SEC_EDGAR", "type": "company_profile" }
-                    field_map = { "description": "Business Description", "riskFactors": "Risk Factors", "website": "Website", "sicDescription": "SIC Description", "fiscalYearEnd": "Fiscal Year End" }
-                    for field, title in field_map.items(): 
-                        content = docs.get(field, "") 
-                        if content and content.strip(): 
-                            documents.append( Document( page_content=f"{title}:\n{content}", metadata={**base_metadata, "section": field} ) )
-                    if documents:
-                        # Add documents in batches if there are many batch_size = 100 
-                        for i in range(0, len(documents), batch_size): 
-                            batch = documents[i:i + batch_size] 
-                            rag.vector_store.add_documents(batch)
+                    
                     # Add system message to chat
                     st.session_state.messages.append({
                         "role": "assistant", 
@@ -1296,6 +1271,65 @@ with st.sidebar:
                     "role": "assistant", 
                     "content": "Company CIK not available to retrieve SEC filings."
                 })
+        
+        if st.button("Earnings Call Transcript"):
+            # Create columns for year and quarter selection
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Default to current year
+                current_year = datetime.datetime.now().year
+                year_options = list(range(current_year, current_year - 5, -1))
+                selected_year = st.selectbox("Year:", year_options, key="transcript_year")
+            
+            with col2:
+                # Default to most recent quarter
+                current_month = datetime.datetime.now().month
+                default_quarter = ((current_month - 1) // 3) + 1
+                quarter_options = [1, 2, 3, 4]
+                selected_quarter = st.selectbox("Quarter:", quarter_options, index=default_quarter-1, key="transcript_quarter")
+            
+            if st.button("Fetch Transcript", key="fetch_transcript"):
+                st.session_state.messages.append({
+                    "role": "user", 
+                    "content": f"Show me the earnings call transcript for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
+                })
+                
+                with st.spinner(f"Fetching earnings transcript for {st.session_state.company_data['name']}..."):
+                    transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter)
+                    
+                    if "error" in transcript_result:
+                        st.session_state.messages.append({
+                            "role": "assistant", 
+                            "content": f"Error retrieving earnings transcript: {transcript_result['error']}"
+                        })
+                    else:
+                        transcripts = transcript_result.get("transcripts", [])
+                        
+                        if not transcripts:
+                            st.session_state.messages.append({
+                                "role": "assistant", 
+                                "content": f"No earnings call transcript found for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
+                            })
+                        else:
+                            # Display the transcript
+                            transcript_overview = f"# Earnings Call Transcript for {st.session_state.company_data['name']}\n\n"
+                            
+                            for transcript in transcripts:
+                                transcript_date = transcript.get("date", "")
+                                transcript_quarter = transcript.get("quarter", "")
+                                transcript_year = transcript.get("year", "")
+                                transcript_content = transcript.get("content", "")
+                                
+                                transcript_overview += f"**Date:** {transcript_date}\n"
+                                transcript_overview += f"**Quarter:** {transcript_quarter}\n"
+                                transcript_overview += f"**Year:** {transcript_year}\n\n"
+                                transcript_overview += f"**Transcript:**\n\n{transcript_content}\n\n"
+                            
+                            st.session_state.messages.append({
+                                "role": "assistant", 
+                                "content": transcript_overview
+                            })
     
     st.markdown("---")
     st.markdown("### About")
@@ -1348,6 +1382,36 @@ st.caption("""
 This application uses data from the SEC EDGAR database, which contains official company filings.
 Data is retrieved in real-time from SEC.gov and is subject to their terms of service.
 """)
+        risk_factors = extract_section(filing_content, "Item 1A", "Item 1B")
+        
+        # Get company facts
+        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+        headers = {
+            "User-Agent": "CompanyDeepDive research@example.com"
+        }
+        
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        # Extract company information
+        company_info = {
+            "name": data.get("name", ""),
+            "sic": data.get("sicCode", ""),
+            "sicDescription": data.get("sicDescription", ""),
+            "website": data.get("website", ""),
+            "description": business_section[:5000] if len(business_section) > 5000 else business_section,
+            "riskFactors": risk_factors[:5000] if len(risk_factors) > 5000 else risk_factors,
+            "filingDate": filings[0]['filingDate'],
+            "fiscalYearEnd": data.get("fiscalYearEnd", "")
+        }
+        
+        return company_info
+    
+    except Exception as e:
+        logger.error(f"Error extracting company info: {str(e)}")
+        return {"error": f"Failed to extract company info: {str(e)}"}
 
 def extract_section(text, start_marker, end_marker):
     """Extract a section from the filing text"""
@@ -1915,9 +1979,188 @@ with st.sidebar:
     st.title("Company Deep Dive")
     st.markdown("---")
     
+    company_name = st.text_input("Enter a company name or ticker:", key="company_input")
+    
+    if st.button("Analyze Company") and company_name:
+        sanitized_company = sanitize_input(company_name)
+        if validate_company_name(sanitized_company):
+            with st.spinner(f"Analyzing {sanitized_company} using SEC EDGAR data..."):
+                # Search for the company
+                company_search = search_company(sanitized_company)
+                
+                if "error" in company_search:
+                    st.error(f"Error: {company_search['error']}")
+                elif "cik" not in company_search:
+                    st.error("Company CIK not found")
+                else:
+                    # Get company CIK
+                    cik = company_search["cik"]
+                    
+                    # Fetch company information
+                    company_info = fetch_company_info(sanitized_company)
+                    sentiment_result = analyze_company_sentiment(sanitized_company)
+                    swot_result = get_company_swot(sanitized_company)
+                    
+                    # Store results in session state
+                    st.session_state.company_data = {
+                        "name": sanitized_company,
+                        "cik": cik,
+                        "info": company_info.get("info", "Information not available"),
+                        "sentiment": sentiment_result.get("sentiment", "Sentiment analysis not available"),
+                        "swot": swot_result.get("swot", "SWOT analysis not available"),
+                        "financials": company_info.get("financials", {})
+                    }
+                    
+                    # Add system message to chat
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": f"I've analyzed {sanitized_company} using SEC EDGAR data. You can ask me specific questions about this company now."
+                    })
+        else:
+            st.error("Please enter a valid company name or ticker")
     
     st.markdown("---")
     st.markdown("### Analysis Options")
+    
+    if st.session_state.company_data and "name" in st.session_state.company_data:
+        if st.button("Company Overview"):
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": f"Give me an overview of {st.session_state.company_data['name']}"
+            })
+            
+            if "info" in st.session_state.company_data and isinstance(st.session_state.company_data["info"], dict):
+                company_info = st.session_state.company_data["info"]
+                
+                overview = f"# {company_info.get('name', st.session_state.company_data['name'])}\n\n"
+                
+                if "sicDescription" in company_info:
+                    overview += f"**Industry:** {company_info['sicDescription']}\n\n"
+                
+                if "description" in company_info:
+                    overview += f"**Business Description:**\n{company_info['description'][:1000]}...\n\n"
+                
+                if "filingDate" in company_info:
+                    overview += f"**Latest 10-K Filing Date:** {company_info['filingDate']}\n\n"
+                
+                if "website" in company_info and company_info["website"]:
+                    overview += f"**Website:** {company_info['website']}\n\n"
+                
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": overview
+                })
+            else:
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": "Company overview information is not available."
+                })
+            
+        if st.button("Financial Data"):
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": f"What are the financial metrics for {st.session_state.company_data['name']}?"
+            })
+            
+            if "financials" in st.session_state.company_data:
+                financials = st.session_state.company_data["financials"]
+                
+                if isinstance(financials, dict) and "error" not in financials:
+                    financial_overview = f"# Financial Data for {st.session_state.company_data['name']}\n\n"
+                    
+                    # Revenue
+                    if "revenue" in financials and financials["revenue"]:
+                        financial_overview += "## Revenue\n\n"
+                        for item in financials["revenue"][:3]:  # Show last 3 years
+                            financial_overview += f"- {item['date']}: ${item['value']:,.2f}\n"
+                    
+                    # Net Income
+                    if "netIncome" in financials and financials["netIncome"]:
+                        financial_overview += "\n## Net Income\n\n"
+                        for item in financials["netIncome"][:3]:  # Show last 3 years
+                            financial_overview += f"- {item['date']}: ${item['value']:,.2f}\n"
+                    
+                    # Total Assets
+                    if "totalAssets" in financials and financials["totalAssets"]:
+                        financial_overview += "\n## Total Assets\n\n"
+                        for item in financials["totalAssets"][:3]:  # Show last 3 years
+                            financial_overview += f"- {item['date']}: ${item['value']:,.2f}\n"
+                    
+                    # Total Liabilities
+                    if "totalLiabilities" in financials and financials["totalLiabilities"]:
+                        financial_overview += "\n## Total Liabilities\n\n"
+                        for item in financials["totalLiabilities"][:3]:  # Show last 3 years
+                            financial_overview += f"- {item['date']}: ${item['value']:,.2f}\n"
+                    
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": financial_overview
+                    })
+                else:
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": "Financial data is not available from SEC EDGAR for this company."
+                    })
+            else:
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": "Financial data is not available."
+                })
+            
+        if st.button("Market Sentiment"):
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": f"What's the market sentiment for {st.session_state.company_data['name']}?"
+            })
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": st.session_state.company_data["sentiment"]
+            })
+            
+        if st.button("SWOT Analysis"):
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": f"Provide a SWOT analysis for {st.session_state.company_data['name']}"
+            })
+            st.session_state.messages.append({
+                "role": "assistant", 
+                "content": st.session_state.company_data["swot"]
+            })
+            
+        if st.button("Recent SEC Filings"):
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": f"Show me recent SEC filings for {st.session_state.company_data['name']}"
+            })
+            
+            if "cik" in st.session_state.company_data:
+                cik = st.session_state.company_data["cik"]
+                filings = get_company_filings(cik, limit=10)
+                
+                if isinstance(filings, dict) and "error" in filings:
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": f"Error retrieving filings: {filings['error']}"
+                    })
+                else:
+                    filings_overview = f"# Recent SEC Filings for {st.session_state.company_data['name']}\n\n"
+                    
+                    for filing in filings:
+                        filings_overview += f"- **{filing['form']}** filed on {filing['filingDate']}\n"
+                        if filing.get('reportDate'):
+                            filings_overview += f"  Report Date: {filing['reportDate']}\n"
+                        filings_overview += f"  Document: {filing['primaryDocument']}\n\n"
+                    
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": filings_overview
+                    })
+            else:
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": "Company CIK not available to retrieve SEC filings."
+                })
+    
     st.markdown("---")
     st.markdown("### About")
     st.info("""
@@ -1934,6 +2177,25 @@ st.caption("Powered by SEC EDGAR data")
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+
+# Chat input
+if prompt := st.chat_input("Ask me about a company..."):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # Display user message in chat message container
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    
+    # Generate a response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            company_context = st.session_state.company_data.get("name", None)
+            response = process_user_query(prompt, company_context)
+            st.markdown(response)
+    
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
 
 # Instructions at the bottom
 st.markdown("---")
