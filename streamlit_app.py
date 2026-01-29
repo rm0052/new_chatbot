@@ -13,7 +13,8 @@ import logging
 from urllib.parse import quote_plus
 import datetime
 import html
-import defeatbeta
+import defeatbeta_api
+from defeatbeta_api.data.ticker import Ticker
 
 # Configure logging
 logging.basicConfig(
