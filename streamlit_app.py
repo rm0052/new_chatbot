@@ -26,13 +26,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("company_deepdive")
 
-# Load environment variables
-load_dotenv()
-
-# Get API keys from environment variables
-FMP_API_KEY = os.getenv("FMP_API_KEY", "")
-DEFEATBETA_API_KEY = os.getenv("DEFEATBETA_API_KEY", "")
-
 # Set page configuration
 st.set_page_config(
     page_title="Company Deep Dive Chatbot",
