@@ -675,7 +675,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         # Get the ticker symbol (assuming sanitized_company might be a company name)
         # If it's already a ticker, this will just return the ticker
         try:
-            ticker = defeatbeta_client.get_ticker(sanitized_company)
+            ticker = Ticker(sanitized_company)
             if not ticker:
                 # If no ticker found, try using the input directly as a ticker
                 ticker = sanitized_company.upper()
@@ -689,8 +689,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         
         # Fetch the earnings call transcript
         try:
-            transcript_data = defeatbeta_client.get_earnings_call(
-                ticker=ticker,
+            transcript_data = ticker.earning_call_transcripts().get_transcript(
                 year=year,
                 quarter=quarter
             )
@@ -700,9 +699,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
             
             logger.info(f"Successfully retrieved transcript for {ticker} (Year: {year}, Quarter: {quarter})")
             
-            # Analyze the transcript with DefeatBeta's NLP capabilities
-            analysis = defeatbeta_client.analyze_earnings_call(transcript_data)
-            
+
             # Process and sanitize the transcript data
             processed_data = []
             
