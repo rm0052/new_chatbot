@@ -1,3 +1,4 @@
+
 import os
 import streamlit as st
 import pandas as pd
@@ -12,6 +13,7 @@ import logging
 from urllib.parse import quote_plus
 import datetime
 import html
+import defeatbeta
 
 # Configure logging
 logging.basicConfig(
@@ -28,7 +30,8 @@ logger = logging.getLogger("company_deepdive")
 load_dotenv()
 
 # Get API keys from environment variables
-FMP_API_KEY = "EHnkKCCNr84wLOjcblnVaVut0EmXJqCa"
+FMP_API_KEY = os.getenv("FMP_API_KEY", "")
+DEFEATBETA_API_KEY = os.getenv("DEFEATBETA_API_KEY", "")
 
 # Set page configuration
 st.set_page_config(
@@ -627,7 +630,125 @@ def analyze_company_sentiment(company_name):
         return {"error": f"Failed to analyze company sentiment: {str(e)}"}
 
 def get_earnings_transcript(company_name, year=None, quarter=None):
-    """Fetch earnings call transcript from Financial Modeling Prep API"""
+    """Fetch and analyze earnings call transcript using DefeatBeta"""
+    sanitized_company = sanitize_input(company_name)
+    if not validate_company_name(sanitized_company):
+        return {"error": "Invalid company name provided"}
+    
+    if not DEFEATBETA_API_KEY:
+        return {"error": "DefeatBeta API key is not configured. Please set the DEFEATBETA_API_KEY environment variable."}
+    
+    try:
+        # Validate and sanitize year and quarter inputs
+        current_year = datetime.datetime.now().year
+        
+        # If year is not provided, use the current year
+        if year is None:
+            year = current_year
+        else:
+            # Ensure year is an integer and within a reasonable range
+            try:
+                year = int(year)
+                if year < 2000 or year > current_year:
+                    return {"error": f"Year must be between 2000 and {current_year}"}
+            except ValueError:
+                return {"error": "Year must be a valid number"}
+        
+        # If quarter is not provided, use the most recent quarter
+        if quarter is None:
+            current_month = datetime.datetime.now().month
+            quarter = ((current_month - 1) // 3) + 1
+        else:
+            # Ensure quarter is an integer between 1 and 4
+            try:
+                quarter = int(quarter)
+                if quarter < 1 or quarter > 4:
+                    return {"error": "Quarter must be between 1 and 4"}
+            except ValueError:
+                return {"error": "Quarter must be a valid number"}
+        
+        logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
+        
+        # Initialize the DefeatBeta client with API key
+        defeatbeta_client = defeatbeta.Client(api_key=DEFEATBETA_API_KEY)
+        
+        # Get the ticker symbol (assuming sanitized_company might be a company name)
+        # If it's already a ticker, this will just return the ticker
+        try:
+            ticker = defeatbeta_client.get_ticker(sanitized_company)
+            if not ticker:
+                # If no ticker found, try using the input directly as a ticker
+                ticker = sanitized_company.upper()
+                logger.info(f"No ticker found for {sanitized_company}, using input as ticker: {ticker}")
+            else:
+                logger.info(f"Found ticker {ticker} for company {sanitized_company}")
+        except Exception as e:
+            logger.warning(f"Error getting ticker for {sanitized_company}: {str(e)}")
+            ticker = sanitized_company.upper()
+            logger.info(f"Using input as ticker: {ticker}")
+        
+        # Fetch the earnings call transcript
+        try:
+            transcript_data = defeatbeta_client.get_earnings_call(
+                ticker=ticker,
+                year=year,
+                quarter=quarter
+            )
+            
+            if not transcript_data:
+                return {"error": f"No earnings call transcript found for {ticker} (Year: {year}, Quarter: {quarter})"}
+            
+            logger.info(f"Successfully retrieved transcript for {ticker} (Year: {year}, Quarter: {quarter})")
+            
+            # Analyze the transcript with DefeatBeta's NLP capabilities
+            analysis = defeatbeta_client.analyze_earnings_call(transcript_data)
+            
+            # Process and sanitize the transcript data
+            processed_data = []
+            
+            # Basic transcript info
+            transcript_info = {
+                "date": transcript_data.get("date", f"{year}-Q{quarter}"),
+                "quarter": quarter,
+                "year": year,
+                "ticker": ticker,
+                "content": html.escape(transcript_data.get("content", ""))
+            }
+            
+            # Add analysis results
+            if analysis:
+                transcript_info["sentiment"] = analysis.get("sentiment", {})
+                transcript_info["key_topics"] = analysis.get("key_topics", [])
+                transcript_info["executive_tone"] = analysis.get("executive_tone", {})
+                transcript_info["financial_metrics"] = analysis.get("financial_metrics", {})
+                transcript_info["forward_looking_statements"] = analysis.get("forward_looking_statements", [])
+                transcript_info["analyst_questions"] = analysis.get("analyst_questions", [])
+                transcript_info["summary"] = analysis.get("summary", "")
+            
+            processed_data.append(transcript_info)
+            
+            # Return the processed transcript data with analysis
+            return {
+                "transcripts": processed_data,
+                "analysis_available": bool(analysis)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error fetching or analyzing transcript: {str(e)}")
+            
+            # Fallback to FMP API if DefeatBeta fails and FMP_API_KEY is available
+            if FMP_API_KEY:
+                logger.info(f"Falling back to FMP API for {ticker} (Year: {year}, Quarter: {quarter})")
+                return get_earnings_transcript_fmp(sanitized_company, year, quarter)
+            else:
+                return {"error": f"Failed to fetch or analyze transcript: {str(e)}"}
+    
+    except Exception as e:
+        logger.error(f"Unexpected error in DefeatBeta processing: {str(e)}")
+        return {"error": f"An unexpected error occurred: {str(e)}"}
+
+def get_earnings_transcript_fmp(company_name, year=None, quarter=None):
+    """Fallback function to fetch earnings call transcript from Financial Modeling Prep API"""
     sanitized_company = sanitize_input(company_name)
     if not validate_company_name(sanitized_company):
         return {"error": "Invalid company name provided"}
@@ -668,7 +789,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         symbol = quote_plus(sanitized_company.upper())
         url = f"https://financialmodelingprep.com/stable/earning-call-transcript?symbol={symbol}&year={year}&quarter={quarter}&apikey={FMP_API_KEY}"
         
-        logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
+        logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using FMP API")
         
         # Make the API request with proper headers
         headers = {
@@ -696,21 +817,22 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
                 "date": item.get("date", ""),
                 "quarter": item.get("quarter", ""),
                 "year": item.get("year", ""),
-                "content": content
+                "content": content,
+                "source": "Financial Modeling Prep API"
             })
         
-        return {"transcripts": transcript_data}
+        return {"transcripts": transcript_data, "analysis_available": False}
     
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching earnings transcript: {str(e)}")
+        logger.error(f"Error fetching earnings transcript from FMP: {str(e)}")
         return {"error": f"Failed to fetch earnings transcript: {str(e)}"}
     
     except ValueError as e:
-        logger.error(f"Error parsing earnings transcript response: {str(e)}")
+        logger.error(f"Error parsing earnings transcript response from FMP: {str(e)}")
         return {"error": f"Failed to parse earnings transcript response: {str(e)}"}
     
     except Exception as e:
-        logger.error(f"Unexpected error fetching earnings transcript: {str(e)}")
+        logger.error(f"Unexpected error fetching earnings transcript from FMP: {str(e)}")
         return {"error": f"An unexpected error occurred: {str(e)}"}
 
 def get_company_swot(company_name):
@@ -1350,19 +1472,113 @@ with st.sidebar:
                                 "content": no_data_msg
                             })
                         else:
-                            # Display the transcript
+                            # Display the transcript with analysis if available
+                            analysis_available = transcript_result.get("analysis_available", False)
                             transcript_overview = f"# Earnings Call Transcript for {st.session_state.company_data['name']}\n\n"
                             
                             for transcript in transcripts:
                                 transcript_date = transcript.get("date", "")
                                 transcript_quarter = transcript.get("quarter", "")
                                 transcript_year = transcript.get("year", "")
+                                transcript_ticker = transcript.get("ticker", "")
                                 transcript_content = transcript.get("content", "")
                                 
                                 transcript_overview += f"**Date:** {transcript_date}\n"
                                 transcript_overview += f"**Quarter:** {transcript_quarter}\n"
-                                transcript_overview += f"**Year:** {transcript_year}\n\n"
-                                transcript_overview += f"**Transcript:**\n\n{transcript_content}\n\n"
+                                transcript_overview += f"**Year:** {transcript_year}\n"
+                                if transcript_ticker:
+                                    transcript_overview += f"**Ticker:** {transcript_ticker}\n"
+                                
+                                # Add DefeatBeta analysis if available
+                                if analysis_available:
+                                    transcript_overview += "\n## Earnings Call Analysis\n\n"
+                                    
+                                    # Add summary if available
+                                    if "summary" in transcript and transcript["summary"]:
+                                        transcript_overview += f"### Summary\n{transcript['summary']}\n\n"
+                                    
+                                    # Add sentiment analysis if available
+                                    if "sentiment" in transcript and transcript["sentiment"]:
+                                        sentiment = transcript["sentiment"]
+                                        transcript_overview += "### Sentiment Analysis\n"
+                                        if isinstance(sentiment, dict):
+                                            if "overall" in sentiment:
+                                                transcript_overview += f"- **Overall Sentiment:** {sentiment['overall']}\n"
+                                            if "positive" in sentiment:
+                                                transcript_overview += f"- **Positive Score:** {sentiment['positive']:.2f}\n"
+                                            if "negative" in sentiment:
+                                                transcript_overview += f"- **Negative Score:** {sentiment['negative']:.2f}\n"
+                                            if "neutral" in sentiment:
+                                                transcript_overview += f"- **Neutral Score:** {sentiment['neutral']:.2f}\n"
+                                        else:
+                                            transcript_overview += f"- {sentiment}\n"
+                                        transcript_overview += "\n"
+                                    
+                                    # Add key topics if available
+                                    if "key_topics" in transcript and transcript["key_topics"]:
+                                        key_topics = transcript["key_topics"]
+                                        transcript_overview += "### Key Topics Discussed\n"
+                                        if isinstance(key_topics, list):
+                                            for topic in key_topics[:10]:  # Limit to top 10 topics
+                                                if isinstance(topic, dict) and "topic" in topic:
+                                                    topic_text = topic["topic"]
+                                                    topic_score = topic.get("score", "")
+                                                    if topic_score:
+                                                        transcript_overview += f"- {topic_text} (Score: {topic_score:.2f})\n"
+                                                    else:
+                                                        transcript_overview += f"- {topic_text}\n"
+                                                else:
+                                                    transcript_overview += f"- {topic}\n"
+                                        else:
+                                            transcript_overview += f"- {key_topics}\n"
+                                        transcript_overview += "\n"
+                                    
+                                    # Add executive tone if available
+                                    if "executive_tone" in transcript and transcript["executive_tone"]:
+                                        exec_tone = transcript["executive_tone"]
+                                        transcript_overview += "### Executive Tone\n"
+                                        if isinstance(exec_tone, dict):
+                                            for exec_name, tone in exec_tone.items():
+                                                transcript_overview += f"- **{exec_name}:** {tone}\n"
+                                        else:
+                                            transcript_overview += f"- {exec_tone}\n"
+                                        transcript_overview += "\n"
+                                    
+                                    # Add financial metrics if available
+                                    if "financial_metrics" in transcript and transcript["financial_metrics"]:
+                                        fin_metrics = transcript["financial_metrics"]
+                                        transcript_overview += "### Financial Metrics Mentioned\n"
+                                        if isinstance(fin_metrics, dict):
+                                            for metric, value in fin_metrics.items():
+                                                transcript_overview += f"- **{metric}:** {value}\n"
+                                        elif isinstance(fin_metrics, list):
+                                            for metric in fin_metrics:
+                                                if isinstance(metric, dict):
+                                                    metric_name = metric.get("name", "")
+                                                    metric_value = metric.get("value", "")
+                                                    if metric_name and metric_value:
+                                                        transcript_overview += f"- **{metric_name}:** {metric_value}\n"
+                                                    elif metric_name:
+                                                        transcript_overview += f"- {metric_name}\n"
+                                                else:
+                                                    transcript_overview += f"- {metric}\n"
+                                        else:
+                                            transcript_overview += f"- {fin_metrics}\n"
+                                        transcript_overview += "\n"
+                                    
+                                    # Add forward-looking statements if available
+                                    if "forward_looking_statements" in transcript and transcript["forward_looking_statements"]:
+                                        fls = transcript["forward_looking_statements"]
+                                        transcript_overview += "### Forward-Looking Statements\n"
+                                        if isinstance(fls, list):
+                                            for statement in fls[:5]:  # Limit to 5 statements
+                                                transcript_overview += f"- {statement}\n"
+                                        else:
+                                            transcript_overview += f"- {fls}\n"
+                                        transcript_overview += "\n"
+                                
+                                # Add the transcript content
+                                transcript_overview += f"\n## Transcript Content\n\n{transcript_content}\n\n"
                             
                             # Show success message in the expander
                             status_placeholder.success("Transcript retrieved successfully!")
