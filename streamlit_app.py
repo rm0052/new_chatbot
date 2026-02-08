@@ -666,7 +666,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         url = f"https://finance.yahoo.com/quote/{company_name}/earnings?p={company_name}"
         # Fetch the earnings call transcript
         try:
-            params = { "api_key": API_KEY, "url": url, "render_js": "true",   # important to get dynamic content "wait_for": "3s"       # let JS load }
+            params = {"api_key": API_KEY, "url": url, "render_js": "true"}
             if not transcript_data:
                 return {"error": f"No earnings call transcript found for {ticker} (Year: {year}, Quarter: {quarter})"}
             
