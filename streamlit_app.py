@@ -627,9 +627,6 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     if not validate_company_name(sanitized_company):
         return {"error": "Invalid company name provided"}
     
-    if not DEFEATBETA_API_KEY:
-        return {"error": "DefeatBeta API key is not configured. Please set the DEFEATBETA_API_KEY environment variable."}
-    
     try:
         # Validate and sanitize year and quarter inputs
         current_year = datetime.datetime.now().year
