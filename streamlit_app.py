@@ -12,8 +12,7 @@ import logging
 from urllib.parse import quote_plus
 import datetime
 import html
-import defeatbeta_api
-from defeatbeta_api.data.ticker import Ticker
+from scrapingbee import ScrapingBeeClient
 
 # Configure logging
 logging.basicConfig(
@@ -663,46 +662,28 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
         
         # Initialize the DefeatBeta client with API key
-        defeatbeta_client = defeatbeta.Client(api_key=DEFEATBETA_API_KEY)
-        
-        # Get the ticker symbol (assuming sanitized_company might be a company name)
-        # If it's already a ticker, this will just return the ticker
-        try:
-            ticker = Ticker(sanitized_company)
-            if not ticker:
-                # If no ticker found, try using the input directly as a ticker
-                ticker = sanitized_company.upper()
-                logger.info(f"No ticker found for {sanitized_company}, using input as ticker: {ticker}")
-            else:
-                logger.info(f"Found ticker {ticker} for company {sanitized_company}")
-        except Exception as e:
-            logger.warning(f"Error getting ticker for {sanitized_company}: {str(e)}")
-            ticker = sanitized_company.upper()
-            logger.info(f"Using input as ticker: {ticker}")
-        
+        SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
+        url = f"https://finance.yahoo.com/quote/{company_name}/earnings?p={company_name}"
         # Fetch the earnings call transcript
         try:
-            transcript_data = ticker.earning_call_transcripts().get_transcript(
-                year=year,
-                quarter=quarter
-            )
-            
+            params = { "api_key": API_KEY, "url": url, "render_js": "true",   # important to get dynamic content "wait_for": "3s"       # let JS load }
             if not transcript_data:
                 return {"error": f"No earnings call transcript found for {ticker} (Year: {year}, Quarter: {quarter})"}
             
-            logger.info(f"Successfully retrieved transcript for {ticker} (Year: {year}, Quarter: {quarter})")
-            
+            logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
+            response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
+            html = response.text
 
             # Process and sanitize the transcript data
             processed_data = []
             
             # Basic transcript info
             transcript_info = {
-                "date": transcript_data.get("date", f"{year}-Q{quarter}"),
+                "date": html.get("date", f"{year}-Q{quarter}"),
                 "quarter": quarter,
                 "year": year,
-                "ticker": ticker,
-                "content": html.escape(transcript_data.get("content", ""))
+                "ticker": company_name,
+                "content":html
             }
             
             # Add analysis results
@@ -719,7 +700,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
             
             # Return the processed transcript data with analysis
             return {
-                "transcripts": processed_data,
+                "transcripts": transcript_info,
                 "analysis_available": bool(analysis)
             }
             
@@ -727,12 +708,6 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
             logger.error(f"Error fetching or analyzing transcript: {str(e)}")
             
             # Fallback to FMP API if DefeatBeta fails and FMP_API_KEY is available
-            if FMP_API_KEY:
-                logger.info(f"Falling back to FMP API for {ticker} (Year: {year}, Quarter: {quarter})")
-                return get_earnings_transcript_fmp(sanitized_company, year, quarter)
-            else:
-                return {"error": f"Failed to fetch or analyze transcript: {str(e)}"}
-    
     except Exception as e:
         logger.error(f"Unexpected error in DefeatBeta processing: {str(e)}")
         return {"error": f"An unexpected error occurred: {str(e)}"}
