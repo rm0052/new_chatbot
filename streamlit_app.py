@@ -1426,7 +1426,7 @@ with st.sidebar:
                             # Add to chat history
                             st.session_state.messages.append({
                                 "role": "assistant", 
-                                "content": transcript_overview
+                                "content": transcript_result
                             })
                             
                             # Force a rerun to update the chat display
