@@ -666,12 +666,11 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
         url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
         # Fetch the earnings call transcript
-        try:
-            params = {"api_key": SCRAPINGBEE_API_KEY, "url": url, "render_js": "true"}            
-            logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-            response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
-            html = response.text
-            return html
+        params = {"api_key": SCRAPINGBEE_API_KEY, "url": url, "render_js": "true"}            
+        logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
+        response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
+        html = response.text
+        return html
             
 
 
