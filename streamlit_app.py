@@ -665,11 +665,11 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     ticker=r.json()['data'][0]['ticker']
     # Initialize the DefeatBeta client with API key
     SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
+    client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
     url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
     # Fetch the earnings call transcript
-    params = {"api_key": SCRAPINGBEE_API_KEY, "url": url, "render_js": "true"}            
     logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-    response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
+    response = client.get(url,params={"ai_query": "Extract all article text"}) 
     html = response.text
     return html
             
