@@ -671,44 +671,8 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
             logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
             response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
             html = response.text
-
-            # Process and sanitize the transcript data
-            processed_data = []
+            return html
             
-            # Basic transcript info
-            transcript_info = {
-                "date": html.get("date", f"{year}-Q{quarter}"),
-                "quarter": quarter,
-                "year": year,
-                "ticker": company_name,
-                "content":html
-            }
-            
-            # Add analysis results
-            if analysis:
-                transcript_info["sentiment"] = analysis.get("sentiment", {})
-                transcript_info["key_topics"] = analysis.get("key_topics", [])
-                transcript_info["executive_tone"] = analysis.get("executive_tone", {})
-                transcript_info["financial_metrics"] = analysis.get("financial_metrics", {})
-                transcript_info["forward_looking_statements"] = analysis.get("forward_looking_statements", [])
-                transcript_info["analyst_questions"] = analysis.get("analyst_questions", [])
-                transcript_info["summary"] = analysis.get("summary", "")
-            
-            processed_data.append(transcript_info)
-            
-            # Return the processed transcript data with analysis
-            return {
-                "transcripts": transcript_info,
-                "analysis_available": bool(analysis)
-            }
-            
-        except Exception as e:
-            logger.error(f"Error fetching or analyzing transcript: {str(e)}")
-            
-            # Fallback to FMP API if DefeatBeta fails and FMP_API_KEY is available
-    except Exception as e:
-        logger.error(f"Unexpected error in DefeatBeta processing: {str(e)}")
-        return {"error": f"An unexpected error occurred: {str(e)}"}
 
 
 def get_company_swot(company_name):
