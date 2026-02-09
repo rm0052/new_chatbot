@@ -656,21 +656,22 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
                     return {"error": "Quarter must be between 1 and 4"}
             except ValueError:
                 return {"error": "Quarter must be a valid number"}
-        
-        logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
-        url = "https://api.openfigi.com/v3/search" 
-        payload = { "query": "Apple Inc", "exchCode": "US" } 
-        r = requests.post(url, json=payload)
-        ticker=r.json()['data'][0]['ticker']
-        # Initialize the DefeatBeta client with API key
-        SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
-        url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
-        # Fetch the earnings call transcript
-        params = {"api_key": SCRAPINGBEE_API_KEY, "url": url, "render_js": "true"}            
-        logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-        response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
-        html = response.text
-        return html
+    except Exception as e: 
+        logger.error(f"Error fetching or analyzing transcript: {str(e)}")
+    logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
+    url = "https://api.openfigi.com/v3/search" 
+    payload = { "query": "Apple Inc", "exchCode": "US" } 
+    r = requests.post(url, json=payload)
+    ticker=r.json()['data'][0]['ticker']
+    # Initialize the DefeatBeta client with API key
+    SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
+    url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
+    # Fetch the earnings call transcript
+    params = {"api_key": SCRAPINGBEE_API_KEY, "url": url, "render_js": "true"}            
+    logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
+    response = requests.get("https://app.scrapingbee.com/api/v1", params=params) 
+    html = response.text
+    return html
             
 
 
