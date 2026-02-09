@@ -669,7 +669,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
     # Fetch the earnings call transcript
     logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-    response = client.get(url,params={"ai_query": "Extract all article text"}) 
+    response = client.get(url,params={"ai_query": "Extract all article text and translate to English"}) 
     html = response.text
     return html
             
