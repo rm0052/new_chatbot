@@ -16,6 +16,7 @@ from scrapingbee import ScrapingBeeClient
 import requests
 from serpapi.google_search import GoogleSearch
 from chatbot_rag import get_reddit_rag
+from langchain_core.documents import Document
 
 
 # Configure logging
