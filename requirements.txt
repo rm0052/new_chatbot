@@ -15,3 +15,4 @@ langchain==0.1.0
 sentence-transformers
 langchain-community==0.0.20
 scrapingbee
+yfinance
