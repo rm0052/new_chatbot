@@ -680,7 +680,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     for tag in soup(["script", "style", "noscript"]): 
         tag.decompose() 
     text = " ".join(soup.get_text().split())
-    return url + "\n\n" + "Earnings Retriever Tool": + "/n/n"+text.split("Prepared Remarks", 1)[1].strip()[:2000]
+    return url + "\n\n" + "Earnings Retriever Tool:" + "/n/n"+text.split("Prepared Remarks", 1)[1].strip()[:2000]
             
 
 
