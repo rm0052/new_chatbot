@@ -1297,8 +1297,8 @@ with st.sidebar:
                 try:
                     # Get the transcript data
                     transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter) 
-                    document= Document(page_content=f"\n{transcript_result}")
-                    rag.vector_store.add_documents(document)
+                    document=Document(page_content=f"\n{transcript_result}")
+                    rag.vector_store.add_documents([document])
                     st.session_state.messages.append({
                         "role": "assistant", 
                         "content": transcript_result
