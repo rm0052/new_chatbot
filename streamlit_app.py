@@ -676,9 +676,11 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     response = requests.get(url, headers=headers, timeout=30) 
     response.raise_for_status() 
     text = response.text
-    text = re.sub(r"\s+", " ", text)           # collapse whitespace 
-    text = re.sub(r"[^\x00-\x7F]+", " ", text) # remove weird unicode
-    return text.strip()
+    soup = BeautifulSoup(html, "lxml") 
+    for tag in soup(["script", "style", "noscript"]): 
+        tag.decompose() 
+    text = " ".join(soup.get_text().split())
+    return text
             
 
 
