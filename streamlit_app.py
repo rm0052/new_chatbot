@@ -15,6 +15,8 @@ import html
 from scrapingbee import ScrapingBeeClient
 import requests
 import yfinance as yf
+from datetime import timedelta
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -670,7 +672,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     df.columns = ['Earnings Date'] + list(df.columns[1:])
     df['Year'] = df['Earnings Date'].dt.year 
     df['Quarter'] = df['Earnings Date'].dt.quarter
-    result = df[(df['Year'] == year) & (df['Quarter'] == quarter)]
+    result = df[(df['Year'] == year) & (df['Quarter'] == quarter)]-timedelta(days=1)
     month,day=result.iloc[0]['Earnings Date'].month,result.iloc[0]['Earnings Date'].day
     url = f"https://www.fool.com/earnings/call-transcripts/{year}/{month}/{day}/{company_name}-{ticker}-q{quarter}-{year}-earnings-call-transcript/"
     # Fetch the earnings call transcript
