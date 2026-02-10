@@ -666,6 +666,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     r = requests.post(url, json=payload)
     ticker=r.json()['data'][0]['ticker']
     # Initialize the DefeatBeta client with API key
+    query = f"site:fool.com {ticker} Q{quarter} {year} earnings call"
     params = { "engine": "google", "q": query, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 10, } 
     search = GoogleSearch(params) 
     results = search.get_dict() 
