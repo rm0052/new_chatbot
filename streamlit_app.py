@@ -678,7 +678,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
                                  }, 
                          ) 
     results = response.json()
-    return html
+    return results
             
 
 
