@@ -14,7 +14,7 @@ import datetime
 import html
 from scrapingbee import ScrapingBeeClient
 import requests
-import yfinance as yf
+from serpapi.google_search import GoogleSearch
 from datetime import timedelta
 
 # Configure logging
@@ -666,19 +666,11 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     r = requests.post(url, json=payload)
     ticker=r.json()['data'][0]['ticker']
     # Initialize the DefeatBeta client with API key
-    SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
-    client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
-    query = f"site:fool.com {ticker} Q{quarter} {year} earnings call" 
-    response = client.get( "https://app.scrapingbee.com/api/v1/google", 
-                          params={ "api_key": SCRAPINGBEE_API_KEY, 
-                                  "search": query, 
-                                  "num": 5,              # number of results 
-                                  "country_code": "us", 
-                                  "language": "en", 
-                                 }, 
-                         ) 
-    results = response.json()
-    return results
+    params = { "engine": "google", "q": question, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 30, } 
+    search = GoogleSearch(params) 
+    results = search.get_dict() 
+    filtered_links = [result["link"] for result in results.get("organic_results", [])]
+    return filtered_links
             
 
 
