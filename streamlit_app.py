@@ -675,7 +675,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     headers = { "User-Agent": "Mozilla/5.0" } 
     response = requests.get(url, headers=headers, timeout=30) 
     response.raise_for_status() 
-    text = response.text
+    html = response.text
     soup = BeautifulSoup(html, "lxml") 
     for tag in soup(["script", "style", "noscript"]): 
         tag.decompose() 
