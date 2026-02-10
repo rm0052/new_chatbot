@@ -666,7 +666,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     # Initialize the DefeatBeta client with API key
     SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
     client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
-    df=yf.ticker(ticker).earnings_dates.reset_index()
+    df=yf.Ticker(ticker).earnings_dates.reset_index()
     df.columns = ['Earnings Date'] + list(df.columns[1:])
     df['Year'] = df['Earnings Date'].dt.year 
     df['Quarter'] = df['Earnings Date'].dt.quarter
