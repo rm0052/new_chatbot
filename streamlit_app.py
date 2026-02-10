@@ -15,7 +15,8 @@ import html
 from scrapingbee import ScrapingBeeClient
 import requests
 from serpapi.google_search import GoogleSearch
-from datetime import timedelta
+from chatbot_rag import get_reddit_rag
+
 
 # Configure logging
 logging.basicConfig(
@@ -1294,7 +1295,9 @@ with st.sidebar:
                 
                 try:
                     # Get the transcript data
-                    transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter)           
+                    transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter) 
+                    document= Document(page_content=f"\n{transcript_result}")
+                    rag.vector_store.add_documents(document)
                     st.session_state.messages.append({
                         "role": "assistant", 
                         "content": transcript_result
