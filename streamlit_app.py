@@ -668,20 +668,16 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     # Initialize the DefeatBeta client with API key
     SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
     client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
-    df=yf.Ticker(ticker).earnings_dates.reset_index()
-    df.columns = ['Earnings Date'] + list(df.columns[1:])
-    df['Year'] = df['Earnings Date'].dt.year 
-    df['Quarter'] = df['Earnings Date'].dt.quarter
-    result = df[(df['Year'] == year) & (df['Quarter'] == quarter)]
-    date=result.iloc[0]['Earnings Date']+timedelta(days=30)
-    month,day=date.month,date.day
-    url = f"https://www.fool.com/earnings/call-transcripts/{year}/{month}/{day}/{company_name}-{ticker}-q{quarter}-{year}-earnings-call-transcript/"
-    # Fetch the earnings call transcript
-    logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-    headers = { "User-Agent": "Mozilla/5.0" } 
-    response = requests.get(url, headers=headers, timeout=30) 
-    response.raise_for_status() 
-    html = response.text
+    query = f"site:fool.com {ticker} Q{quarter} {year} earnings call" 
+    response = client.get( "https://app.scrapingbee.com/api/v1/store/google", 
+                          params={ "api_key": SCRAPINGBEE_API_KEY, 
+                                  "search": query, 
+                                  "num": 5,              # number of results 
+                                  "country_code": "us", 
+                                  "language": "en", 
+                                 }, 
+                         ) 
+    results = response.json()
     return html
             
 
