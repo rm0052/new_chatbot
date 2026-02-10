@@ -16,3 +16,4 @@ sentence-transformers
 langchain-community==0.0.20
 scrapingbee
 serpapi
+google-search-results
