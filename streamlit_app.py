@@ -678,7 +678,9 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     url = f"https://www.fool.com/earnings/call-transcripts/{year}/{month}/{day}/{company_name}-{ticker}-q{quarter}-{year}-earnings-call-transcript/"
     # Fetch the earnings call transcript
     logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
-    response = client.get(url,params={"ai_query": "Extract all article text"}) 
+    headers = { "User-Agent": "Mozilla/5.0" } 
+    response = requests.get(url, headers=headers, timeout=30) 
+    response.raise_for_status() 
     html = response.text
     return html
             
