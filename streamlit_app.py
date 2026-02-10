@@ -662,7 +662,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
         logger.error(f"Error fetching or analyzing transcript: {str(e)}")
     logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
     url = "https://api.openfigi.com/v3/search" 
-    payload = { "query": "Apple Inc", "exchCode": "US" } 
+    payload = { "query": company_name, "exchCode": "US" } 
     r = requests.post(url, json=payload)
     ticker=r.json()['data'][0]['ticker']
     # Initialize the DefeatBeta client with API key
