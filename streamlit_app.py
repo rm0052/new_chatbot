@@ -18,7 +18,7 @@ from serpapi.google_search import GoogleSearch
 from chatbot_rag import get_reddit_rag
 from langchain_core.documents import Document
 
-
+rag = get_reddit_rag()
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
