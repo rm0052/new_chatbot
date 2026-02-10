@@ -669,7 +669,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
     client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
     query = f"site:fool.com {ticker} Q{quarter} {year} earnings call" 
-    response = client.get( "https://app.scrapingbee.com/api/v1/store/google", 
+    response = client.get( "https://app.scrapingbee.com/api/v1/google", 
                           params={ "api_key": SCRAPINGBEE_API_KEY, 
                                   "search": query, 
                                   "num": 5,              # number of results 
