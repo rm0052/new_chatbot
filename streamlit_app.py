@@ -14,7 +14,7 @@ import datetime
 import html
 from scrapingbee import ScrapingBeeClient
 import requests
-
+import yfinance as yf
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -666,7 +666,13 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     # Initialize the DefeatBeta client with API key
     SCRAPINGBEE_API_KEY = "U3URPLPZWZ3QHVGEEP5HTXJ95873G9L58RJ3EHS4WSYTXOZAIE71L278CF589042BBMKNXZTRY23VYPF"
     client = ScrapingBeeClient(api_key=SCRAPINGBEE_API_KEY)
-    url = f"https://finance.yahoo.com/quote/{ticker}/earnings?p={ticker}"
+    df=yf.ticker(ticker).earnings_dates.reset_index()
+    df.columns = ['Earnings Date'] + list(df.columns[1:])
+    df['Year'] = df['Earnings Date'].dt.year 
+    df['Quarter'] = df['Earnings Date'].dt.quarter
+    result = df[(df['Year'] == year) & (df['Quarter'] == quarter)]
+    month,day=result.iloc[0]['Earnings Date'].month,result.iloc[0]['Earnings Date'].day
+    url = f"https://www.fool.com/earnings/call-transcripts/{year}/{month}/{day}/{company_name}-{ticker}-q{quarter}-{year}-earnings-call-transcript/"
     # Fetch the earnings call transcript
     logger.info(f"Successfully retrieved transcript for {sanitized_company} (Year: {year}, Quarter: {quarter})")
     response = client.get(url,params={"ai_query": "Extract all article text"}) 
