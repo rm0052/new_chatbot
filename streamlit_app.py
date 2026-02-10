@@ -675,12 +675,10 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     headers = { "User-Agent": "Mozilla/5.0" } 
     response = requests.get(url, headers=headers, timeout=30) 
     response.raise_for_status() 
-    html = response.text
-    soup = BeautifulSoup(html, "html.parser") 
-    article = soup.find("article") 
-    paragraphs = article.find_all("p") 
-    text = "\n\n".join( p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True) )
-    return text
+    text = response.text
+    text = re.sub(r"\s+", " ", text)           # collapse whitespace 
+    text = re.sub(r"[^\x00-\x7F]+", " ", text) # remove weird unicode
+    return text.strip()
             
 
 
