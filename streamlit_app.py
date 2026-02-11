@@ -17,6 +17,7 @@ import requests
 from serpapi.google_search import GoogleSearch
 from chatbot_rag import get_reddit_rag
 from langchain_core.documents import Document
+import yfinance as yf
 
 rag = get_reddit_rag()
 # Configure logging
@@ -1269,18 +1270,24 @@ with st.sidebar:
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
-            
+            url = "https://api.openfigi.com/v3/search" payload = { "query": company_name, "exchCode": "US" } 
+            r = requests.post(url, json=payload) 
+            ticker=r.json()['data'][0]['ticker']
+            df=yf.Ticker(ticker).earnings_dates.reset_index() 
+            df.columns = ['Earnings Date'] + list(df.columns[1:]) 
+            df['Year'] = df['Earnings Date'].dt.year 
+            df['Quarter'] = df['Earnings Date'].dt.quarter
             with col1:
                 # Default to current year
                 current_year = datetime.datetime.now().year
-                year_options = list(range(current_year, current_year - 5, -1))
+                year_options = sorted(set(df['Year']), reverse=True)
                 selected_year = st.selectbox("Year:", year_options, key="transcript_year")
             
             with col2:
                 # Default to most recent quarter
                 current_month = datetime.datetime.now().month
                 default_quarter = ((current_month - 1) // 3) + 1
-                quarter_options = [1, 2, 3, 4]
+                quarter_options = sorted(set(df['Quarter']), reverse=True)
                 selected_quarter = st.selectbox("Quarter:", quarter_options, index=default_quarter-1, key="transcript_quarter")
             
             # Separate button outside of any nested conditions
