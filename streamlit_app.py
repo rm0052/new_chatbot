@@ -673,16 +673,16 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     params = { "engine": "google", "q": query, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 1, } 
     search = GoogleSearch(params) 
     results = search.get_dict() 
-    url = results["organic_results"][0]["link"]
+    filtered_links = [result["link"] for result in results.get("organic_results", [])]
+    url = filtered_links[0]
     headers = { "User-Agent": "Mozilla/5.0" } 
     response = requests.get(url, headers=headers, timeout=30) 
-    response.raise_for_status() 
     html = response.text
     soup = BeautifulSoup(html, "lxml") 
     for tag in soup(["script", "style", "noscript"]): 
         tag.decompose() 
     text = " ".join(soup.get_text().split())
-    return url + "\n\n" + "Earnings Retriever Tool:\n\n"+text.split("Prepared Remarks", 1)[1].strip()[:2000]
+    return url + "\n\n" + "Earnings Retriever Tool:\n\n"+text.strip()[500:2000]
             
 
 
