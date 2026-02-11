@@ -668,7 +668,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     response = requests.get(url, headers={'User-Agent': 'your-email@example.com'}) 
     companies = pd.DataFrame.from_dict(response.json(), orient='index') # Search for company 
     result = companies[companies['title'].str.contains(company_name, case=False)] 
-    ticker=result['ticker'].values[0])
+    ticker=result['ticker'].values[0]
     query = f"site:fool.com {ticker} Q{quarter} {year} earnings call"
     params = { "engine": "google", "q": query, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 1, } 
     search = GoogleSearch(params) 
