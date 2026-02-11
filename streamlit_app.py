@@ -1299,7 +1299,7 @@ with st.sidebar:
                     transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter) 
                     document = Document(page_content=str(transcript_result), metadata={ "company": str(st.session_state.company_data["name"]), "year": str(selected_year), "quarter": str(selected_quarter), "source": "motley_fool" }) 
                     rag.vector_store.add_documents([document])
-                    analysis = rag.query( f"Get analysis for {st.session_state.company_data['name']} " f"with year {selected_year} and quarter {selected_quarter}", lookback_hours=24 )
+                    analysis = rag.query( f"Get analysis for" f"with year {selected_year} and quarter {selected_quarter}", lookback_hours=24 )
                     st.session_state.messages.append({
                         "role": "assistant", 
                         "content": transcript_result+"\n"+analysis
