@@ -1306,7 +1306,7 @@ with st.sidebar:
                     })
                     
                     # Force a rerun to update the chat display
-                    st.experimental_rerun()
+                    st.rerun()
                 except Exception as e:
                     error_msg = f"An error occurred while fetching the transcript: {str(e)}"
                     status_placeholder.error(error_msg)
