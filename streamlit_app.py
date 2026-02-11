@@ -1284,12 +1284,13 @@ with st.sidebar:
                 year_options = sorted(set(df['Year']), reverse=True)
                 selected_year = st.selectbox("Year:", year_options, key="transcript_year")
             
-            with col2:
-                # Default to most recent quarter
-                current_month = datetime.datetime.now().month
-                default_quarter = ((current_month - 1) // 3) + 1
-                quarter_options = sorted(set(df['Quarter']))
-                selected_quarter = st.selectbox("Quarter:", quarter_options, index=default_quarter-1, key="transcript_quarter")
+            with col2: # Filter quarters based on selected year 
+                quarters_for_year = sorted(df[df['Year'] == selected_year]['Quarter'].unique(), reverse=False) # Default to most recent quarter for that year 
+                current_month = datetime.datetime.now().month 
+                default_quarter = ((current_month - 1) // 3) + 1 
+                if default_quarter not in quarters_for_year: 
+                    default_quarter = quarters_for_year[-1]  # fallback to latest available quarter 
+                    selected_quarter = st.selectbox( "Quarter:", quarters_for_year, index=quarters_for_year.index(default_quarter), key="transcript_quarter" )
             
             # Separate button outside of any nested conditions
             if st.button("Fetch Transcript", key="fetch_transcript"):
