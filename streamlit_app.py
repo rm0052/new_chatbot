@@ -688,7 +688,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     for tag in soup(["script", "style", "noscript"]): 
         tag.decompose() 
     text = " ".join(soup.get_text().split())
-    return url + "\n\n" + "Earnings Retriever Tool:\n\n"+text.split("Full Conference Call Transcript", 1)[1].strip()[:2000]
+    return url + "\n\n" + "Earnings Call:\n\n"+text.split("Full Conference Call Transcript", 1)[1].strip()
             
 
 
@@ -1314,10 +1314,10 @@ with st.sidebar:
                     transcript_result = get_earnings_transcript(st.session_state.company_data['name'], selected_year, selected_quarter) 
                     document = Document(page_content=str(transcript_result), metadata={ "company": str(st.session_state.company_data["name"]), "year": str(selected_year), "quarter": str(selected_quarter), "source": "motley_fool" }) 
                     rag.vector_store.add_documents([document])
-                    analysis = rag.query(f"Get analysis for {st.session_state.company_data['name']} " f"with year {selected_year} and quarter {selected_quarter}", lookback_hours=24)
+                    analysis = rag.query(f"Get summary for {st.session_state.company_data['name']} " f"with year {selected_year} and quarter {selected_quarter}", lookback_hours=24)
                     st.session_state.messages.append({
                         "role": "assistant", 
-                        "content": transcript_result+"\n"+analysis["answer"]
+                        "content": "Summary:\n"+analysis["answer"]
                     })
                     
                     # Force a rerun to update the chat display
