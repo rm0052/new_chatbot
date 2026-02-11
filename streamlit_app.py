@@ -1288,7 +1288,7 @@ with st.sidebar:
                 # Default to most recent quarter
                 current_month = datetime.datetime.now().month
                 default_quarter = ((current_month - 1) // 3) + 1
-                quarter_options = sorted(set(df['Quarter']), reverse=True)
+                quarter_options = sorted(set(df['Quarter']))
                 selected_quarter = st.selectbox("Quarter:", quarter_options, index=default_quarter-1, key="transcript_quarter")
             
             # Separate button outside of any nested conditions
