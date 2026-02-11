@@ -1290,7 +1290,7 @@ with st.sidebar:
                 default_quarter = ((current_month - 1) // 3) + 1 
                 if default_quarter not in quarters_for_year: 
                     default_quarter = quarters_for_year[-1]  # fallback to latest available quarter 
-                    selected_quarter = st.selectbox( "Quarter:", quarters_for_year, index=quarters_for_year.index(default_quarter), key="transcript_quarter" )
+                selected_quarter = st.selectbox( "Quarter:", quarters_for_year, index=quarters_for_year.index(default_quarter), key="transcript_quarter" )
             
             # Separate button outside of any nested conditions
             if st.button("Fetch Transcript", key="fetch_transcript"):
