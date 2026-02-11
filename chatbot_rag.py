@@ -45,7 +45,7 @@ class RedditRAG:
         try:
             self.llm = ChatGroq(
                 api_key=GROQ_API_KEY,
-                model="llama-3.1-70b-versatile",
+                model="meta-llama/llama-4-maverick-17b-128e-instruct",
                 temperature=0.3,
                 max_tokens=2048
             )
