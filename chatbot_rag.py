@@ -45,9 +45,9 @@ class RedditRAG:
         try:
             self.llm = ChatGroq(
                 api_key=GROQ_API_KEY,
-                model="llama-3.1-8b-instant",
+                model="llama-3.1-70b-versatile",
                 temperature=0.3,
-                max_tokens=1024
+                max_tokens=2048
             )
             print("Successfully initialized Groq LLM")
         except Exception as e:
