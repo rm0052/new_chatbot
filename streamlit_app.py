@@ -1272,7 +1272,8 @@ with st.sidebar:
             url = "https://api.openfigi.com/v3/search" 
             payload = { "query": company_name, "exchCode": "US" } 
             r = requests.post(url, json=payload) 
-            ticker=r.json()['data'][0]['ticker']
+            entry=r.json()[0]['data'][0]
+            ticker = ( entry.get("ticker") or entry.get("symbol") or entry.get("securityDescription") )
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
             df['Year'] = df['Earnings Date'].dt.year 
