@@ -1270,7 +1270,8 @@ with st.sidebar:
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
-            url = "https://api.openfigi.com/v3/search" payload = { "query": company_name, "exchCode": "US" } 
+            url = "https://api.openfigi.com/v3/search" 
+            payload = { "query": company_name, "exchCode": "US" } 
             r = requests.post(url, json=payload) 
             ticker=r.json()['data'][0]['ticker']
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
