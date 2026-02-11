@@ -664,7 +664,11 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     except Exception as e: 
         logger.error(f"Error fetching or analyzing transcript: {str(e)}")
     logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
-    ticker = yf.Ticker(company_name).info['symbol']
+    url = "https://www.sec.gov/files/company_tickers.json" 
+    response = requests.get(url, headers={'User-Agent': 'your-email@example.com'}) 
+    companies = pd.DataFrame.from_dict(response.json(), orient='index') # Search for company 
+    result = companies[companies['title'].str.contains(company_name, case=False)] 
+    ticker=result['ticker'].values[0])
     query = f"site:fool.com {ticker} Q{quarter} {year} earnings call"
     params = { "engine": "google", "q": query, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 1, } 
     search = GoogleSearch(params) 
@@ -1265,8 +1269,11 @@ with st.sidebar:
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
-            ticker = yf.Ticker(company_name)
-            ticker=ticker.info['symbol']
+            url = "https://www.sec.gov/files/company_tickers.json" 
+            response = requests.get(url, headers={'User-Agent': 'your-email@example.com'}) 
+            companies = pd.DataFrame.from_dict(response.json(), orient='index') # Search for company 
+            result = companies[companies['title'].str.contains(company_name, case=False)]
+            ticker=result['ticker'].values[0])
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
             df['Year'] = df['Earnings Date'].dt.year 
