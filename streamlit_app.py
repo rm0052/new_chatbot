@@ -675,6 +675,12 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     results = search.get_dict() 
     filtered_links = [result["link"] for result in results.get("organic_results", [])]
     url = filtered_links[0]
+    if 
+    ( str(year) not in url or 
+     str(ticker).lower() not in url.lower() or 
+     f"q{quarter}" not in url.lower() 
+    ): 
+        return "Earnings call not available"
     headers = { "User-Agent": "Mozilla/5.0" } 
     response = requests.get(url, headers=headers, timeout=30) 
     html = response.text
