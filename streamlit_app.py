@@ -1273,7 +1273,7 @@ with st.sidebar:
             response = requests.get(url, headers={'User-Agent': 'your-email@example.com'}) 
             companies = pd.DataFrame.from_dict(response.json(), orient='index') # Search for company 
             result = companies[companies['title'].str.contains(company_name, case=False)]
-            ticker=result['ticker'].values[0])
+            ticker=result['ticker'].values[0]
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
             df['Year'] = df['Earnings Date'].dt.year 
