@@ -1282,7 +1282,7 @@ with st.sidebar:
             ticker=result['ticker'].values[0]
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
-            df = df[df['Earnings Date'] <= pd.Timestamp.now()]
+            df = df[df['Earnings Date'] <= pd.Timestamp.now()].reset_index(drop=True)
             df['Year'] = df['Earnings Date'].dt.year 
             df['Quarter'] = df['Earnings Date'].dt.quarter
             with col1:
