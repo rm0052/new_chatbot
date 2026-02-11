@@ -664,11 +664,7 @@ def get_earnings_transcript(company_name, year=None, quarter=None):
     except Exception as e: 
         logger.error(f"Error fetching or analyzing transcript: {str(e)}")
     logger.info(f"Fetching earnings transcript for {sanitized_company} (Year: {year}, Quarter: {quarter}) using DefeatBeta")
-    url = "https://api.openfigi.com/v3/search" 
-    payload = { "query": company_name, "exchCode": "US" } 
-    r = requests.post(url, json=payload)
-    ticker=r.json()['data'][0]['ticker']
-    # Initialize the DefeatBeta client with API key
+    ticker = yf.Ticker(company_name).info['symbol']
     query = f"site:fool.com {ticker} Q{quarter} {year} earnings call"
     params = { "engine": "google", "q": query, "api_key": "1b6c33844c034b01987d113928c20e7dc77c934345ae673545479a7b77f8e7c1", "num": 1, } 
     search = GoogleSearch(params) 
@@ -1269,11 +1265,7 @@ with st.sidebar:
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
-            url = "https://api.openfigi.com/v3/search" 
-            payload = { "query": company_name, "exchCode": "US" } 
-            r = requests.post(url, json=payload) 
-            entry=r.json()['data'][0]
-            ticker = ( entry.get("ticker") or entry.get("symbol") or entry.get("securityDescription") )
+            ticker = yf.Ticker(company_name).info['symbol']
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
             df['Year'] = df['Earnings Date'].dt.year 
