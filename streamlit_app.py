@@ -1265,7 +1265,8 @@ with st.sidebar:
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
-            ticker = yf.Ticker(company_name).info['symbol']
+            ticker = yf.Ticker(company_name)
+            ticker=ticker.info['symbol']
             df=yf.Ticker(ticker).earnings_dates.reset_index() 
             df.columns = ['Earnings Date'] + list(df.columns[1:]) 
             df['Year'] = df['Earnings Date'].dt.year 
