@@ -1053,7 +1053,7 @@ def process_user_query(query, company_context=None):
         # Financial data query
         if any(term in query_lower for term in ["financial", "revenue", "income", "profit", "loss", "earnings", "assets", "liabilities"]):
             answer=rag.query(query,lookback_hours=24)
-            return answer["result"]
+            return answer["answer"]
             
             if isinstance(financial_data, dict) and "error" in financial_data:
                 return f"Error retrieving financial data: {financial_data['error']}"
