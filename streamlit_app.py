@@ -1240,9 +1240,9 @@ if prompt := st.chat_input("Ask me about a company..."):
 st.markdown("---")
 st.markdown("""
 ### How to use this chatbot:
-1. Enter a company name or ticker in the sidebar and click "Analyze Company"
+1. Enter a company name in the sidebar and click "Analyze Company"
 2. Use the analysis buttons in the sidebar to get specific information
-3. Or simply ask questions in the chat input below
+3. Or simply click "Fetch Transcript" then ask questions in the chat input below
 """)
 
 # Footer with data source notice
