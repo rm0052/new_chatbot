@@ -1041,7 +1041,7 @@ with st.sidebar:
     
     company_name = st.text_input("Enter a company name or ticker:", key="company_input")
     
-    if st.button("Analyze Company") and company_name:
+    if st.button("Confirm Selection") and company_name:
         sanitized_company = sanitize_input(company_name)
         if validate_company_name(sanitized_company):
             with st.spinner(f"Analyzing {sanitized_company} using SEC EDGAR data..."):
@@ -1233,7 +1233,7 @@ if prompt := st.chat_input("Ask me about a company..."):
 st.markdown("---")
 st.markdown("""
 ### How to use this chatbot:
-1. Enter a company name in the sidebar and click "Analyze Company"
+1. Enter a company name in the sidebar and click "Confirm Selection"
 2. Use the analysis buttons in the sidebar to get specific information
 3. Or simply click "Fetch Transcript" then ask questions in the chat input below
 """)
