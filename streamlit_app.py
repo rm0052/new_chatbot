@@ -1205,7 +1205,7 @@ with st.sidebar:
     st.info("""
     This Company Deep Dive Chatbot helps you analyze companies using official SEC EDGAR data.
     
-    Enter a company name or ticker in the sidebar and click 'Analyze Company' to get started.
+    Enter a company name in the sidebar and click 'Analyze Company' to get started.
     """)
 
 # Main chat interface
