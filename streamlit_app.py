@@ -1102,12 +1102,6 @@ with st.sidebar:
                 "content": st.session_state.company_data["swot"]
             })
             
-        if st.button("Recent SEC Filings"):
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": f"Show me recent SEC filings for {st.session_state.company_data['name']}"
-            })
-            
             if "cik" in st.session_state.company_data:
                 cik = st.session_state.company_data["cik"]
                 filings = get_company_filings(cik, limit=10)
