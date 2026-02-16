@@ -1080,7 +1080,6 @@ with st.sidebar:
             st.error("Please enter a valid company name or ticker")
     
     st.markdown("---")
-    st.markdown("### Analysis Options")
     
     if st.session_state.company_data and "name" in st.session_state.company_data:
         if st.button("Market Sentiment"):
