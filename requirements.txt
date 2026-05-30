@@ -18,3 +18,5 @@ scrapingbee
 serpapi
 google-search-results
 yfinance
+torch
+torchvision
