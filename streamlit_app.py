@@ -1069,13 +1069,7 @@ with st.sidebar:
                         "sentiment": sentiment_result.get("sentiment", "Sentiment analysis not available"),
                         "swot": swot_result.get("swot", "SWOT analysis not available"),
                         "financials": company_info.get("financials", {})
-                    }
-                    
-                    # Add system message to chat
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": f"I've analyzed {sanitized_company} using SEC EDGAR data. You can ask me specific questions about this company now."
-                    })
+                    }                    
         else:
             st.error("Please enter a valid company name or ticker")
     
@@ -1146,7 +1140,6 @@ with st.sidebar:
                     })
     
     st.markdown("---")
-    st.markdown("### About")
 # Main chat interface
 st.title("Earnings Chatbot 🏢")
 
