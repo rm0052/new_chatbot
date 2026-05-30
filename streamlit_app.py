@@ -1081,7 +1081,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    if st.session_state.company_data and "name" in st.session_state.company_data        
+    if st.session_state.company_data and "name" in st.session_state.company_data:      
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
@@ -1147,12 +1147,6 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### About")
-    st.info("""
-    This Company Deep Dive Chatbot helps you analyze companies using official SEC EDGAR data.
-    
-    Enter a company name in the sidebar and click 'Analyze Company' to get started.
-    """)
-
 # Main chat interface
 st.title("Earnings Chatbot 🏢")
 
