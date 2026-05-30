@@ -1081,55 +1081,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    if st.session_state.company_data and "name" in st.session_state.company_data:
-        if st.button("Market Sentiment"):
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": f"What's the market sentiment for {st.session_state.company_data['name']}?"
-            })
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": st.session_state.company_data["sentiment"]
-            })
-            
-        if st.button("SWOT Analysis"):
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": f"Provide a SWOT analysis for {st.session_state.company_data['name']}"
-            })
-            st.session_state.messages.append({
-                "role": "assistant", 
-                "content": st.session_state.company_data["swot"]
-            })
-            
-            if "cik" in st.session_state.company_data:
-                cik = st.session_state.company_data["cik"]
-                filings = get_company_filings(cik, limit=10)
-                
-                if isinstance(filings, dict) and "error" in filings:
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": f"Error retrieving filings: {filings['error']}"
-                    })
-                else:
-                    filings_overview = f"# Recent SEC Filings for {st.session_state.company_data['name']}\n\n"
-                    
-                    for filing in filings:
-                        filings_overview += f"- **{filing['form']}** filed on {filing['filingDate']}\n"
-                        if filing.get('reportDate'):
-                            filings_overview += f"  Report Date: {filing['reportDate']}\n"
-                        filings_overview += f"  Document: {filing['primaryDocument']}\n\n"
-                    
-                    st.session_state.messages.append({
-                        "role": "assistant", 
-                        "content": filings_overview
-                    })
-            else:
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": "Company CIK not available to retrieve SEC filings."
-                })
-        
+    if st.session_state.company_data and "name" in st.session_state.company_data        
         if st.expander("Earnings Call Transcript"):
             # Create columns for year and quarter selection
             col1, col2 = st.columns(2)
@@ -1202,8 +1154,7 @@ with st.sidebar:
     """)
 
 # Main chat interface
-st.title("Company Deep Dive Chatbot 🏢")
-st.caption("Powered by SEC EDGAR data")
+st.title("Earnings Chatbot 🏢")
 
 # Display chat messages
 for message in st.session_state.messages:
@@ -1234,13 +1185,10 @@ st.markdown("---")
 st.markdown("""
 ### How to use this chatbot:
 1. Enter a company name in the sidebar and click "Confirm Selection"
-2. Use the analysis buttons in the sidebar to get specific information
-3. Or simply click "Fetch Transcript" then ask questions in the chat input below
+2. Select year and Quarter and click (Fetch Transcript)
+3. Ask questions in the chat input below
 """)
 
 # Footer with data source notice
 st.markdown("---")
-st.caption("""
-This application uses data from the SEC EDGAR database, which contains official company filings.
-Data is retrieved in real-time from SEC.gov and is subject to their terms of service.
-""")
+
