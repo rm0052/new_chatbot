@@ -1105,12 +1105,7 @@ with st.sidebar:
                 selected_quarter = st.selectbox( "Quarter:", quarters_for_year, index=quarters_for_year.index(default_quarter), key="transcript_quarter" )
             
             # Separate button outside of any nested conditions
-            if st.button("Fetch Transcript", key="fetch_transcript"):
-                st.session_state.messages.append({
-                    "role": "user", 
-                    "content": f"Show me the earnings call transcript for {st.session_state.company_data['name']} (Year: {selected_year}, Quarter: {selected_quarter})"
-                })
-                
+            if st.button("Fetch Transcript", key="fetch_transcript"):                
                 # Create a placeholder to show status directly in the expander
                 status_placeholder = st.empty()
                 status_placeholder.info(f"Fetching earnings transcript for {st.session_state.company_data['name']}...")
